@@ -84,12 +84,12 @@ DESIRED_HEIGHT = 480
 def build_image():
     download_map_image()
     precip_ts = download_precip_image()
-    info_path = COMBINED_FILE.parent / "image_info.json"
+    info_path = COMBINED_FILE.parent / "image_info.txt"
     with open(info_path, "w") as f:
-        json.dump({
-            "precip_ts": precip_ts,
-            "text": dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime("%Y-%m-%d %H:%M:%S") + " + "+ f"{FORECAST_SECS//60} mins forecast",
-        }, f)
+        f.write(f"precip_ts={precip_ts}\n")
+        text = dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime("%Y-%m-%d %H:%M:%S") + " + "+ f"{FORECAST_SECS//60} mins forecast"
+        f.write(f"text={text}\n")
+
     qr_code_image()
 
 
