@@ -21,6 +21,12 @@
 #include "lwip/altcp_tls.h"
 #include "lwip/dns.h"
 
+
+
+// Mainly copied from pico-examples/pico_w/wifi/tls_client/tls_common.c
+
+namespace {
+
 typedef struct TLS_CLIENT_T_ {
     struct altcp_pcb *pcb;
     bool complete;
@@ -31,7 +37,7 @@ typedef struct TLS_CLIENT_T_ {
 
 static struct altcp_tls_config *tls_config = NULL;
 
-static err_t tls_client_close(void *arg) {
+err_t tls_client_close(void *arg) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
     err_t err = ERR_OK;
 
@@ -52,7 +58,7 @@ static err_t tls_client_close(void *arg) {
     return err;
 }
 
-static err_t tls_client_connected(void *arg, struct altcp_pcb *pcb, err_t err) {
+err_t tls_client_connected(void *arg, struct altcp_pcb *pcb, err_t err) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
     if (err != ERR_OK) {
         printf("connect failed %d\n", err);
@@ -69,21 +75,21 @@ static err_t tls_client_connected(void *arg, struct altcp_pcb *pcb, err_t err) {
     return ERR_OK;
 }
 
-static err_t tls_client_poll(void *arg, struct altcp_pcb *pcb) {
+err_t tls_client_poll(void *arg, struct altcp_pcb *pcb) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
     printf("timed out\n");
     state->error = PICO_ERROR_TIMEOUT;
     return tls_client_close(arg);
 }
 
-static void tls_client_err(void *arg, err_t err) {
+void tls_client_err(void *arg, err_t err) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
     printf("tls_client_err %d\n", err);
     tls_client_close(state);
     state->error = PICO_ERROR_GENERIC;
 }
 
-static err_t tls_client_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err) {
+err_t tls_client_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
     if (!p) {
         printf("connection closed\n");
@@ -109,7 +115,7 @@ static err_t tls_client_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, e
     return ERR_OK;
 }
 
-static void tls_client_connect_to_server_ip(const ip_addr_t *ipaddr, TLS_CLIENT_T *state)
+void tls_client_connect_to_server_ip(const ip_addr_t *ipaddr, TLS_CLIENT_T *state)
 {
     err_t err;
     u16_t port = 443;
@@ -123,7 +129,7 @@ static void tls_client_connect_to_server_ip(const ip_addr_t *ipaddr, TLS_CLIENT_
     }
 }
 
-static void tls_client_dns_found(const char* hostname, const ip_addr_t *ipaddr, void *arg)
+void tls_client_dns_found(const char* hostname, const ip_addr_t *ipaddr, void *arg)
 {
     if (ipaddr)
     {
@@ -138,7 +144,7 @@ static void tls_client_dns_found(const char* hostname, const ip_addr_t *ipaddr, 
 }
 
 
-static bool tls_client_open(const char *hostname, void *arg) {
+bool tls_client_open(const char *hostname, void *arg) {
     err_t err;
     ip_addr_t server_ip;
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
@@ -158,7 +164,7 @@ static bool tls_client_open(const char *hostname, void *arg) {
     mbedtls_ssl_set_hostname((mbedtls_ssl_context*) altcp_tls_context(state->pcb), hostname);
 
     printf("resolving %s\n", hostname);
-
+ 
     // cyw43_arch_lwip_begin/end should be used around calls into lwIP to ensure correct locking.
     // You can omit them if you are in a callback from lwIP. Note that when using pico_cyw_arch_poll
     // these calls are a no-op and can be omitted, but it is a good practice to use them in
@@ -183,7 +189,7 @@ static bool tls_client_open(const char *hostname, void *arg) {
 }
 
 // Perform initialisation
-static TLS_CLIENT_T* tls_client_init(void) {
+TLS_CLIENT_T* tls_client_init(void) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T *)calloc(1, sizeof(TLS_CLIENT_T));
     if (!state) {
         printf("failed to allocate state\n");
@@ -199,7 +205,7 @@ bool run_tls_client_test(const uint8_t *cert, size_t cert_len, const char *serve
     tls_config = altcp_tls_create_config_client(cert, cert_len);
     assert(tls_config);
 
-    //mbedtls_ssl_conf_authmode(&tls_config->conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    // mbedtls_ssl_conf_authmode(& tls_config->conf, MBEDTLS_SSL_VERIFY_NONE);
 
     TLS_CLIENT_T *state = tls_client_init();
     if (!state) {
@@ -233,17 +239,29 @@ bool run_tls_client_test(const uint8_t *cert, size_t cert_len, const char *serve
     return err == 0;
 }
 
+}
 
-static const std::string URL = "http://muse-hub.taile8f45.ts.net/";
-static const std::string PORT = "443";
 
-#define TLS_CLIENT_SERVER        "fw-download-alias1.raspberrypi.com"
-#define TLS_CLIENT_HTTP_REQUEST  "GET /net_install/boot.sig HTTP/1.1\r\n" \
+// static const std::string URL = "http://muse-hub.taile8f45.ts.net/";
+// static const std::string PORT = "443";
+
+#define TLS_CLIENT_SERVER        "muse-hub.taile8f45.ts.net"
+#define TLS_CLIENT_HTTP_REQUEST  "GET / HTTP/1.1\r\n" \
                                  "Host: " TLS_CLIENT_SERVER "\r\n" \
                                  "Connection: close\r\n" \
                                  "\r\n"
+
+// #define TLS_CLIENT_SERVER        "fw-download-alias1.raspberrypi.com"
+// #define TLS_CLIENT_HTTP_REQUEST  "GET /net_install/boot.sig HTTP/1.1\r\n" \
+//                                  "Host: " TLS_CLIENT_SERVER "\r\n" \
+//                                  "Connection: close\r\n" \
+//                                  "\r\n"
 #define TLS_CLIENT_TIMEOUT_SECS  15
 
+
+#include "mbedtls/ecdsa.h"
+#include "mbedtls/ecp.h"
+#include "mbedtls/sha256.h"
 
 bool test_fetch() {
     int link_status = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
@@ -252,7 +270,6 @@ bool test_fetch() {
         printf("Not connected to WiFi!\n");
         return false;
     }
-
     bool pass = run_tls_client_test(NULL, 0, TLS_CLIENT_SERVER, TLS_CLIENT_HTTP_REQUEST, TLS_CLIENT_TIMEOUT_SECS);
 
     return pass;
