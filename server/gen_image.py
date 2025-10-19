@@ -9,6 +9,7 @@ from PIL import Image, ImageEnhance
 import qrcode
 
 from api_secrets import RAINBOW_API_TOKEN
+import json
 
 
 PRECIP_TILE_FILE = Path("forecast.png")
@@ -42,8 +43,10 @@ def download_precip_image():
         print("Image updated.")
     else:
         print(f"Failed to fetch: {response.status_code}")
+    
+    return ts
 
-def download_map_image(save_path: Path):
+def download_map_image():
     url = f"https://tile.openstreetmap.org/{ZOOM}/{TILE_X}/{TILE_Y}.png"
     headers = {"User-Agent": "TileFetcher/1.0 (your.email@example.com)"}
     r = requests.get(url, headers=headers, timeout=10)
@@ -51,11 +54,8 @@ def download_map_image(save_path: Path):
     if r.status_code != 200:
         raise RuntimeError(f"Failed to fetch tile: {r.status_code}")
 
-    if save_path:
-        with open(save_path, "wb") as f:
-            f.write(r.content)
-
-    return r.content
+    with open(MAP_TILE_FILE, "wb") as f:
+        f.write(r.content)
 
 
 def qr_code_image():
@@ -73,8 +73,11 @@ def qr_code_image():
     print("Saved QR code image.")
 
 def build_image():
-    download_map_image(MAP_TILE_FILE)
-    download_precip_image()
+    download_map_image()
+    precip_ts = download_precip_image()
+    info_path = COMBINED_FILE.parent / "image_info.json"
+    with open(info_path, "w") as f:
+        json.dump({"precip_ts": precip_ts}, f)
     qr_code_image()
 
     desired_width = 800
