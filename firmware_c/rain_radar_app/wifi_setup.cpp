@@ -134,9 +134,10 @@ namespace wifi_setup
         return link_status == CYW43_LINK_JOIN;
     }
 
-    void network_deinit()
+    void network_deinit(InkyFrame &inky_frame)
     {
         cyw43_arch_deinit();
+        inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
     }
 
 } // namespace wifi_setup

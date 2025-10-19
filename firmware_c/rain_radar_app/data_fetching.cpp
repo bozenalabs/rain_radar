@@ -30,7 +30,6 @@
 
 namespace data_fetching
 {
-
     // Parse simple "key=value" body
     bool parseBody(const char *body, size_t body_len, ImageInfo &info)
     {
@@ -78,20 +77,8 @@ namespace data_fetching
             return err;
         }
 
-        // copy pbuf to a buffer // TODO
+        // TODO: handle pbuf chains
         size_t body_len = p->len;
-
-        // if (body_len >= 1024) {
-        //     printf("Image info too large: %u bytes\n", body_len);
-        //     return ERR_BUF;
-        // }
-
-        // char* body = (char*)malloc(body_len + 1);
-        // if (!body) {
-        //     printf("Failed to allocate memory for image info\n");
-        //     return ERR_MEM;
-        // }
-        // pbuf_copy_partial(p, body, body_len, 0);
 
         ImageInfo *info = (ImageInfo *)_image_info;
         parseBody((char *)p->payload, body_len, *info);
@@ -154,7 +141,6 @@ namespace data_fetching
         // printf("Received image data chunk of %u bytes\n", body_len);
 
         // Ive had to modify PSRamDisplay to make the write function and pointToAddress public
-
         size_t offset = image_writer->offset;
         size_t new_offset = offset + body_len;
         if (new_offset > image_writer->max_address_write)

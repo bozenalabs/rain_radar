@@ -12,6 +12,7 @@
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
+#include "hardware/watchdog.h"
 #include "inky_frame_7.hpp"
 #include "wifi_setup.hpp"
 #include "pico/stdlib.h"
@@ -19,6 +20,7 @@
 #include "secrets.h"
 #include "data_fetching.hpp"
 #include "rain_radar_common.hpp"
+#include "persistent_data.hpp"
 
 using namespace pimoroni;
 
@@ -39,13 +41,24 @@ void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
     graphics.text(msg, Point(5, graphics.height - 22), graphics.width / 2, 2);
 }
 
+
 int main()
 {
     stdio_init_all();
-    sleep_ms(500);
+    sleep_ms(2000);
 
     InkyFrame inky_frame;
     inky_frame.init();
+
+    InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
+    printf("Wakup event: %d\n", event);
+
+    PersistentData persistent_data = read_persistent_data();
+    printf("Persistent data: mode=%d\n", persistent_data.mode);
+    persistent_data.mode = (persistent_data.mode + 1) % 5;
+    printf("New persistent data: mode=%d\n", persistent_data.mode);
+    write_persistent_data(&persistent_data);
+
 
     auto on_error = [&](const std::string_view &msg)
     {
@@ -77,8 +90,10 @@ int main()
     draw_lower_left_text(inky_frame, info.unwrap().image_text);
     inky_frame.update(true);
 
-    printf("Done\n");
-
-    wifi_setup::network_deinit();
+    wifi_setup::network_deinit(inky_frame);
+    constexpr int SLEEP_AFTER_UPDATE_MINUTES = 1;
+    printf("Done, sleeping for %d\n", SLEEP_AFTER_UPDATE_MINUTES);
+    inky_frame.sleep(SLEEP_AFTER_UPDATE_MINUTES);
+    // watchdog_reboot(0, 0, 0);
     return 0;
 }

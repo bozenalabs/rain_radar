@@ -13,7 +13,7 @@ namespace wifi_setup
 {
 
     Err wifi_connect(pimoroni::InkyFrame &inky_frame);
-    void network_deinit();
+    void network_deinit(pimoroni::InkyFrame &inky_frame);
     bool is_connected();
 
 }
