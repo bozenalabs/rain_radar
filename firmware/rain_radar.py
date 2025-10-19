@@ -2,6 +2,8 @@ import gc
 import jpegdec
 from urllib import urequest
 from ujson import load
+import inky_helper as ih
+import time
 
 gc.collect()
 
@@ -25,17 +27,13 @@ YELLOW = 5
 ORANGE = 6
 TAUPE = 7
 
-
-def show_error(text):
-    graphics.set_pen(4)
-    graphics.rectangle(0, 10, WIDTH, 35)
-    graphics.set_pen(1)
-    graphics.text(text, 5, 16, 400, 2)
-
+error_string = ""
+IMG_URL = "https://muse-hub.taile8f45.ts.net/combined.jpg"
+JSON_URL = "https://muse-hub.taile8f45.ts.net/image_info.json"
 
 def update():
-    IMG_URL = "https://muse-hub.taile8f45.ts.net/combined.jpg"
-    JSON_URL = "https://muse-hub.taile8f45.ts.net/image_info.json"
+    global error_string
+    error_string = ""
 
     try:
         # Grab the image
@@ -52,14 +50,14 @@ def update():
         gc.collect()
     except OSError as e:
         print(e)
-        show_error("Unable to download image")
+        error_string = "Unable to download image"
     else:
         try:
             # Grab the image info JSON
             socket = urequest.urlopen(JSON_URL)
             gc.collect()
             data = bytearray(1024)
-            with open(IMAGE_INFO_FILE_NAME, "wb") as f:
+            with open(IMAGE_INFO_FILE_NAME, "w") as f:
                 while True:
                     if socket.readinto(data) == 0:
                         break
@@ -70,7 +68,7 @@ def update():
             print("Downloaded image info")
         except OSError as e:
             print(e)
-            show_error("Unable to download image info")
+            error_string = "Unable to download image info"
 
 def open_image_info():
     with open(IMAGE_INFO_FILE_NAME, "r") as f:
@@ -79,6 +77,7 @@ def open_image_info():
 
 
 def draw():
+    global error_string
     # TODO: https://github.com/pimoroni/inky-frame/blob/main/examples/display_png.py
     jpeg = jpegdec.JPEG(graphics)
     gc.collect()  # For good measure...
@@ -96,12 +95,31 @@ def draw():
         graphics.text("Unable to display image!", 5, (HEIGHT // 2) - 15, WIDTH, 2)
         graphics.text("Check your network settings in secrets.py", 5, (HEIGHT // 2) + 2, WIDTH, 2)
 
-    image_info = open_image_info
+    print("Displayed image")
+    if ih.file_exists(IMAGE_INFO_FILE_NAME):
+        image_info = open_image_info()
+        image_info_text = image_info["text"]
+        current_precip_ts = image_info.get("precip_ts", "")
+        current_time = time.time()
+        if current_time - current_precip_ts > 20*60 and error_string == "":
+            error_string = f"Time diff too high: {current_time - current_precip_ts} secs"
+    else:
+        image_info_text = "No image info found"
+        if error_string == "":
+            error_string = image_info_text
 
-    graphics.set_pen(BLACK)
+
+    graphics.set_pen(BLUE)
     graphics.rectangle(0, HEIGHT - 25, WIDTH, 25)
     graphics.set_pen(WHITE)
-    graphics.text(image_info["text"], 5, HEIGHT - 20, WIDTH, 2)
+    graphics.text(image_info_text, 5, HEIGHT - 20, WIDTH, 2)
    
+    if error_string != "":
+        text = error_string
+        graphics.set_pen(RED)
+        graphics.rectangle(0, 10, WIDTH, 35)
+        graphics.set_pen(WHITE)
+        graphics.text(text, 5, 16, 400, 2)
+
     gc.collect()
     graphics.update()

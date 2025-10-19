@@ -40,8 +40,10 @@ gc.collect()
 # and then goes to sleep ZzzzZZz
 
 while True:
+    print("starting update")
     app.update()
     ih.led_warn.on()
+    print("starting draw")
     app.draw()
     print("finished draw")
     ih.led_warn.off()
