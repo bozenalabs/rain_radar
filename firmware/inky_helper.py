@@ -88,6 +88,7 @@ def network_connect(SSID, PSK):
     print(f"SSID: {SSID}")
     print(f"PSK: {PSK}")
     wlan = network.WLAN(network.STA_IF)
+    time.sleep(0.1)
     wlan.active(True)
     # print(wlan.scan())
 

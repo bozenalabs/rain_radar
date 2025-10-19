@@ -1,22 +1,19 @@
 import os
 import requests
 import requests
-import time
-import threading
-from flask import Flask, send_file
 from pathlib import Path
 
-if token := os.environ.get("RAINBOW_API_TOKEN"):
-    RAINBOW_API_TOKEN = token
+# if token := os.environ.get("RAINBOW_API_TOKEN"):
+#     RAINBOW_API_TOKEN = token
 from PIL import Image
+
+from api_secrets import RAINBOW_API_TOKEN
 
 
 PRECIP_TILE_FILE = Path("forecast.png")
 MAP_TILE_FILE = Path("map.png")
-COMBINED_FILE = Path("combined.png")
+COMBINED_FILE = Path("combined.jpg")
 
-
-app = Flask(__name__)
 
 def get_snapshot_timestamp():
     response = requests.get(f"https://api.rainbow.ai/tiles/v1/snapshot?token={RAINBOW_API_TOKEN}")
@@ -58,33 +55,21 @@ def download_map_image(save_path: Path):
 
     return r.content
 
-def download_images_continually():
+def build_image():
     download_map_image(MAP_TILE_FILE)
-    while True:
-        try:
-            download_precip_image()
-        except Exception as e:
-            print("Error downloading:", e)
-
-        with Image.open(MAP_TILE_FILE).convert("RGBA") as map_img, Image.open(PRECIP_TILE_FILE).convert("RGBA") as precip_img:
-            if map_img.size != precip_img.size:
-                precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
-            combined = Image.alpha_composite(map_img, precip_img)
-            combined.save(COMBINED_FILE)
-            print("Combined map.png and forecast.png into one image.")
+    download_precip_image()
 
 
-        UPDATE_INTERVAL = 3600  # every hour
-        time.sleep(UPDATE_INTERVAL)
+    desired_width = 800
+    desired_height = 480
 
-@app.route(f"/{COMBINED_FILE}")
-def serve_forecast():
-    return send_file(COMBINED_FILE, mimetype="image/png")
-
-c
+    with Image.open(MAP_TILE_FILE).convert("RGBA") as map_img, Image.open(PRECIP_TILE_FILE).convert("RGBA") as precip_img:
+        if map_img.size != precip_img.size:
+            precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
+        combined = Image.alpha_composite(map_img, precip_img)
+        rgb_image = combined.convert("RGB")
+        rgb_image.save(COMBINED_FILE)
+        print("Combined map.png and forecast.png into one image.")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-
-    threading.Thread(target=download_images_continually, daemon=True).start()
-    app.run(host="0.0.0.0", port=port)
+    build_image()
