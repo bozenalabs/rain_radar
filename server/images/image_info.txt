@@ -1,2 +1,2 @@
-precip_ts=1760645400
-text=2025-10-16 21:10:00 + 10 mins forecast
+precip_ts=1760874600
+text=2025-10-19 12:50:00 + 10 mins forecast

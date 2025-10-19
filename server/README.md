@@ -1,4 +1,9 @@
+# notes
+- Install `uv`
+- run with `uv run python main.py --deploy`
+
 ### building the image
+
 https://tile.openstreetmap.org/9/255/170.png
 
 https://doc.rainbow.ai/api-ref/tiles/
