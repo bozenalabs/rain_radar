@@ -5,3 +5,4 @@
 server/publicly_available/
 **/secrets.h
 server/cache/
+.venv/

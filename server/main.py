@@ -14,9 +14,15 @@ import datetime as dt
 import ipdb
 import math
 
-PRECIP_TILE_FILE = Path("forecast.png")
-MAP_TILE_FILE = Path("map.png")
-QRCODE_FILE = Path("qrcode.png")
+
+IMAGES_DIR = Path("images")
+IMAGES_DIR.mkdir(exist_ok=True)
+
+DEPLOYMENT_DIR = Path("publicly_available")
+
+PRECIP_TILE_FILE = IMAGES_DIR / ("forecast.png")
+MAP_TILE_FILE = IMAGES_DIR / ("map.png")
+QRCODE_FILE = IMAGES_DIR / ("qrcode.png")
 COMBINED_FILE = Path("publicly_available/combined.jpg")
 QUANTIZED_FILE = Path("publicly_available/quantized.bin")
 
