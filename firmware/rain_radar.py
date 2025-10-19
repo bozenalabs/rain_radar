@@ -11,7 +11,7 @@ graphics = None
 WIDTH = None
 HEIGHT = None
 
-IMAGE_FILE_NAME = "rain_radar.jpg"
+IMAGE_FILE_NAME = "rain_radar.bin"
 IMAGE_INFO_FILE_NAME = "image_info.json"
 
 # Length of time between updates in minutes.
@@ -29,6 +29,7 @@ TAUPE = 7
 
 error_string = ""
 IMG_URL = "https://muse-hub.taile8f45.ts.net/combined.jpg"
+QUANTIZED_URL = "https://muse-hub.taile8f45.ts.net/quantized.bin"
 JSON_URL = "https://muse-hub.taile8f45.ts.net/image_info.json"
 
 def update():
@@ -37,7 +38,7 @@ def update():
 
     try:
         # Grab the image
-        socket = urequest.urlopen(IMG_URL)
+        socket = urequest.urlopen(QUANTIZED_URL)
         gc.collect()
         data = bytearray(1024)
         with open(IMAGE_FILE_NAME, "wb") as f:
@@ -76,18 +77,66 @@ def open_image_info():
         return info
 
 
+INKY_7_WIDTH_PX = 800 
+INKY_7_HEIGHT_PX = 480
+NB_BYTES_TOTAL = (INKY_7_WIDTH_PX * INKY_7_HEIGHT_PX // 8) * 3
+NB_PIX_PER_PLANE = NB_BYTES_TOTAL // 3
+
+def iter_color_spans_from_buffer(buf):
+    current_col = None
+    span_nb = 1
+    current_x = 0
+    current_y = 0
+    for i in range(NB_PIX_PER_PLANE):
+      for j in range(7, -1, -1):
+        col = 0
+        mask = 1 << j
+        col |= ((buf[i] & mask) >> j) << 2
+        col |= ((buf[i + NB_PIX_PER_PLANE] & mask) >> j ) << 1
+        col |= ((buf[i + NB_PIX_PER_PLANE + NB_PIX_PER_PLANE] & mask) >> j)
+        if current_col == col:
+          span_nb += 1
+        elif current_col is None:
+          current_col = col
+        else:
+          new_index = current_x + span_nb
+          if new_index >= INKY_7_WIDTH_PX:
+              first_line_span = INKY_7_WIDTH_PX - current_x
+              span_nb -= first_line_span
+              # emit remaining on line
+              yield current_col, first_line_span, current_x, current_y
+              current_x = 0
+              current_y += 1
+              # if span multiple line, emit them
+              while span_nb > INKY_7_WIDTH_PX:
+                yield current_col, INKY_7_WIDTH_PX, current_x, current_y
+                current_y += 1
+                span_nb -= INKY_7_WIDTH_PX
+          if span_nb:
+            yield current_col, span_nb, current_x, current_y
+            current_x += span_nb
+          current_col = col
+          span_nb = 1
+    yield current_col, span_nb, current_x, current_y
+
 def draw():
     global error_string
     # TODO: https://github.com/pimoroni/inky-frame/blob/main/examples/display_png.py
-    jpeg = jpegdec.JPEG(graphics)
+    # jpeg = jpegdec.JPEG(graphics)
     gc.collect()  # For good measure...
 
     graphics.set_pen(WHITE)
     graphics.clear()
 
     try:
-        jpeg.open_file(IMAGE_FILE_NAME)
-        jpeg.decode()
+        # jpeg.open_file(IMAGE_FILE_NAME)
+        # jpeg.decode()
+        print("starting to display image")
+        print(gc.mem_free())
+        with open(IMAGE_FILE_NAME, "rb") as f:
+            for col, span, x, y in iter_color_spans_from_buffer(f.read()):
+                graphics.set_pen(col)
+                graphics.pixel_span(x, y, span)
     except OSError:
         graphics.set_pen(RED)
         graphics.rectangle(0, (HEIGHT // 2) - 20, WIDTH, 40)
@@ -102,7 +151,7 @@ def draw():
         current_precip_ts = image_info["precip_ts"]
         current_time = time.time()
         if current_time - current_precip_ts > 30*60 and error_string == "":
-            error_string = f"Time diff too high: {current_time - current_precip_ts} secs (current_time: {current_time}, precip_ts: {current_precip_ts})"
+            error_string = f"Time diff too high: {current_time - current_precip_ts}s"
     else:
         image_info_text = "No image info found"
         if error_string == "":
