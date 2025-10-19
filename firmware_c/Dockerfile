@@ -1,7 +1,6 @@
 # Dockerfile - Raspberry Pi Pico (RP2040) C/C++ development environment
 FROM ubuntu:22.04
 
-
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/usr/bin:$PATH
 
@@ -28,13 +27,11 @@ RUN useradd -m appuser
 USER appuser
 RUN mkdir /home/appuser/pico
 WORKDIR /home/appuser/pico
-
+ 
 RUN git clone --depth=1 --recursive -b master https://github.com/raspberrypi/pico-sdk.git
 ENV PICO_SDK_PATH=/home/appuser/pico/pico-sdk
 RUN git clone --depth=1 -b master https://github.com/raspberrypi/pico-examples.git
-# RUN git clone --depth=1 -b main https://github.com/pimoroni/pimoroni-pico.git --recursive
+# My branch has support to write directly to the frame buffer
+RUN git clone --depth=1 -b direct_to_frame_buffer https://github.com/bozenalabs/pimoroni-pico.git --recursive
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
-
-# Default behavior: open a shell (override with docker run ... CMD)
-CMD ["/bin/bash"]

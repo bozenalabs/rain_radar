@@ -11,13 +11,6 @@ Im trying to write in c following this https://learn.pimoroni.com/article/pico-d
 Ive made a docker file for it.
 
 
-I start the container with docker compose.
-then i launch vscode to attach to the container.
-in the container I have setup vscode similar to: https://paulbupejr.com/raspberry-pi-pico-windows-development/
-I left the cmake kit as unspecified.
-And selected the rain radar target.
-Then Cmake build command works.
-put the pico into bootloader and copy over `docker cp 2e933ce5c2cc:/home/appuser/pico/rain_radar_app/build/rain_radar.uf2 /media/my_user/RPI-RP2`
 
 The `Serial Monitor` extension from microsoft works even in the container and I can see the printfs from the board.
 Getting the serial monitor to work reliable is a little tricky:
@@ -28,4 +21,3 @@ the pico wireless example isnt an example of using the rasp pi pico w to connect
 it is for this board which uses an esp32: https://shop.pimoroni.com/products/pico-wireless-pack
 See this:
 https://datasheets.raspberrypi.com/picow/connecting-to-the-internet-with-pico-w.pdf
-
