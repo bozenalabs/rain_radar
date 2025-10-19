@@ -54,31 +54,33 @@ TILE_X = 63
 TILE_Y = 42
 
 
-def download_precip_image():
+def download_precip_image(zoom, tile_x, tile_y, ts):
     print("Downloading forecast image...")
-    ts = get_snapshot_timestamp()
-    print(f"Snapshot timestamp: {ts}")
-    response = get_tile_handler(ts, ZOOM, TILE_X, TILE_Y)
-    if response.status_code == 200:
-        with open(PRECIP_TILE_FILE, "wb") as f:
-            f.write(response.content)
-        print("Image updated.")
-    else:
-        print(f"Failed to fetch: {response.status_code}")
 
-    return ts
+    response = get_tile_handler(ts, zoom, tile_x, tile_y)
+    assert response.status_code == 200
+
+    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}.png"
+    with open(file_path, "wb") as f:
+        f.write(response.content)
+
+    return file_path
 
 
-def download_map_image():
-    url = f"https://api.maptiler.com/maps/0199e42b-f3ba-728f-81a6-ba4d151cc8fb/{ZOOM}/{TILE_X}/{TILE_Y}.png?key={api_secrets.MAPTILER_API_KEY}"
+def download_map_image(zoom, tile_x, tile_y):
+    url = f"https://api.maptiler.com/maps/0199e42b-f3ba-728f-81a6-ba4d151cc8fb/{zoom}/{tile_x}/{tile_y}.png?key={api_secrets.MAPTILER_API_KEY}"
     headers = {"User-Agent": "TileFetcher/1.0 (your.email@example.com)"}
     r = requests.get(url, headers=headers, timeout=10)
 
     if r.status_code != 200:
         raise RuntimeError(f"Failed to fetch tile: {r.status_code}")
+    
+    file_path = IMAGES_DIR / f"map_{zoom}_{tile_x}_{tile_y}.png"
 
-    with open(MAP_TILE_FILE, "wb") as f:
+    with open(file_path, "wb") as f:
         f.write(r.content)
+    return file_path
+
 
 
 def qr_code_image():
@@ -102,10 +104,47 @@ def qr_code_image():
 DESIRED_WIDTH = 800
 DESIRED_HEIGHT = 480
 
-def build_image():
-    download_map_image()
+def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_end_y, ts):
+    map_tiles = {}
+    precip_tiles = {}
+    for x in range(tile_start_x, tile_end_x + 1):
+        for y in range(tile_start_y, tile_end_y + 1):
+            im_path = download_map_image(zoom, x, y)
+            map_tiles[(x, y)] = Image.open(im_path)
+            im_path = download_precip_image(zoom, x, y, ts)
+            precip_tiles[(x, y)] = Image.open(im_path)
 
-    precip_ts =  download_precip_image()
+    # assert all the values of each on the same size
+    assert len(set(im.size for im in map_tiles.values())) == 1
+    assert len(set(im.size for im in precip_tiles.values())) == 1
+
+    num_tiles_x = tile_end_x - tile_start_x + 1
+    num_tiles_y = tile_end_y - tile_start_y + 1
+
+    map_tile_width, map_tile_height = next(iter(map_tiles.values())).size
+    precip_tile_width, precip_tile_height = next(iter(precip_tiles.values())).size
+
+    combined_map = Image.new("RGB", (map_tile_width * num_tiles_x, map_tile_height * num_tiles_y))
+    combined_precip = Image.new("RGBA", (precip_tile_width * num_tiles_x, precip_tile_height * num_tiles_y))
+
+    # combine the tiles into one image
+    for ix, x in enumerate(range(tile_start_x, tile_end_x + 1)):
+        for iy, y in enumerate(range(tile_start_y, tile_end_y + 1)):
+            map_tile = map_tiles[(x, y)]
+            precip_tile = precip_tiles[(x, y)]
+            combined_map.paste(map_tile, (ix * map_tile_width, iy * map_tile_height))
+            combined_precip.paste(precip_tile, (ix * precip_tile_width, iy * precip_tile_height))
+
+    combined_map.save(MAP_TILE_FILE)
+    combined_precip.save(PRECIP_TILE_FILE)
+    print("Combined map and precipitation tiles into single images.")
+
+def build_image():
+
+    precip_ts = get_snapshot_timestamp()
+    print(f"Snapshot timestamp: {precip_ts}")
+    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts)
+
     with open(IMAGE_INFO_FILE, "w") as f:
         f.write(f"precip_ts={precip_ts}\n")
         text = (
@@ -201,8 +240,8 @@ def convert_to_bitmap(img):
     )
 
     # draw color swatches across the top edge using palette indices
-    # num_colors = len(PALETTE) // 3
 
+    # num_colors = len(PALETTE) // 3
     # for i in range(num_colors):
     #     swatch_width = 70
     #     swatch_height = 30
