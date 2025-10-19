@@ -23,7 +23,8 @@ PRECIP_FORECAST_TILE_FILE = IMAGES_DIR / ("precip_forecast.png")
 MAP_TILE_FILE = IMAGES_DIR / ("map.png")
 QRCODE_FILE = IMAGES_DIR / ("qrcode.png")
 COMBINED_FILE = IMAGES_DIR / ("combined.jpg")
-QUANTIZED_FILE = IMAGES_DIR / ("quantized.bin")
+QUANTIZED_BIN_FILE = IMAGES_DIR / ("quantized.bin")
+QUANTIZED_PNG_FILE = IMAGES_DIR / ("quantized.png")
 IMAGE_INFO_FILE = IMAGES_DIR / ("image_info.txt")
 
 INTENSITY_MIN = 9
@@ -395,7 +396,7 @@ def convert_to_bitmap(img):
 
 
     # so we can see it
-    quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.png"))
+    quantized_img.convert("RGB").save(QUANTIZED_PNG_FILE)
 
     # for other picos, the frame buffer on the pico is logically 3 single bit planes one after anther.
     # plane_0[x,y] = bit 0 of color
@@ -412,7 +413,7 @@ def convert_to_bitmap(img):
             framebuffer[counter] = c
             counter += 1
 
-    with open(QUANTIZED_FILE, "wb") as f:
+    with open(QUANTIZED_BIN_FILE, "wb") as f:
         f.write(framebuffer)
     print("Wrote quantized framebuffer.")
 
@@ -430,8 +431,8 @@ if __name__ == "__main__":
             else:
                 deploy_dir = Path(f"publicly_available/{i}")
             deploy_dir.mkdir(exist_ok=True)
-            shutil.copy(COMBINED_FILE, deploy_dir / COMBINED_FILE.name)
-            shutil.copy(QUANTIZED_FILE, deploy_dir / QUANTIZED_FILE.name)
+            shutil.copy(QUANTIZED_PNG_FILE, deploy_dir / QUANTIZED_PNG_FILE.name)
+            shutil.copy(QUANTIZED_BIN_FILE, deploy_dir / QUANTIZED_BIN_FILE.name)
             shutil.copy(IMAGE_INFO_FILE, deploy_dir / IMAGE_INFO_FILE.name)
             print(f"Copied images to {deploy_dir}")
 
