@@ -38,10 +38,8 @@ def get_snapshot_timestamp():
 
 
 def get_tile_handler(snapshot_timestamp: int, zoom: int, x: int, y: int):
-    # ipdb.set_trace()
     url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{FORECAST_SECS}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
-    # ipdb.set_trace()p
-    print(url)
+    # print(url)
     response = requests.get(url, stream=True, timeout=10)
     return response
 
@@ -55,7 +53,7 @@ TILE_Y = 42
 
 
 def download_precip_image(zoom, tile_x, tile_y, ts):
-    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}.png"
+    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}_{ts}.png"
     if not file_path.exists():
         print("Downloading forecast image...")
 
@@ -74,12 +72,12 @@ def download_map_image(zoom, tile_x, tile_y):
     if not file_path.exists():
         url = f"https://api.maptiler.com/maps/0199e42b-f3ba-728f-81a6-ba4d151cc8fb/{zoom}/{tile_x}/{tile_y}.png?key={api_secrets.MAPTILER_API_KEY}"
         headers = {"User-Agent": "TileFetcher/1.0 (your.email@example.com)"}
+        print(f"Downloading map image from {url}...")
         r = requests.get(url, headers=headers, timeout=10)
 
         if r.status_code != 200:
             raise RuntimeError(f"Failed to fetch tile: {r.status_code}")
         
-
         with open(file_path, "wb") as f:
             f.write(r.content)
     return file_path
