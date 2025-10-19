@@ -9,13 +9,14 @@ to get bootloader mode, hold BOOTSEL on the rpi and tap reset on the frame.
 the vscode micropico plugin is good. Read the getting started for it.
 
 
-> **Important:** create a file named `secrets.py` in the `firmware` folder and do NOT commit it.
+### secrets.py
+> [!IMPORTANT]
+> Create a file named `secrets.py` in the `firmware` folder.
 
-Example `firmware/secrets.py` (use your real values, and keep this file out of version control):
+example:
 
 ```python
 # firmware/secrets.py
-# Fill in your credentials and API keys. DO NOT commit this file.
 
 WIFI_SSID = "your-ssid"
 WIFI_PASSWORD = "your-password"
@@ -27,5 +28,3 @@ MQTT_PASSWORD = "mqtt-password"
 
 OPENWEATHER_API_KEY = "your-openweather-api-key"
 ```
-
-Add `firmware/secrets.py` to your `.gitignore` so secrets never get pushed.
