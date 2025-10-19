@@ -20,19 +20,20 @@ example:
 
 ```python
 # firmware/secrets.py
-
 WIFI_SSID = "your-ssid"
 WIFI_PASSWORD = "your-password"
-
-# Optional services
-MQTT_BROKER = "mqtt.example.com"
-MQTT_USER = "mqtt-user"
-MQTT_PASSWORD = "mqtt-password"
-
-OPENWEATHER_API_KEY = "your-openweather-api-key"
 ```
 
 
+### building the image
 https://tile.openstreetmap.org/9/255/170.png
 
 https://doc.rainbow.ai/api-ref/tiles/
+
+See API usage:
+https://developer.rainbow.ai/reports
+
+
+### hosting data
+
+using tailscale funnel

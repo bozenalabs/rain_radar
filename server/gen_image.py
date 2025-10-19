@@ -2,6 +2,7 @@ import os
 import requests
 import requests
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # if token := os.environ.get("RAINBOW_API_TOKEN"):
 #     RAINBOW_API_TOKEN = token
@@ -83,7 +84,7 @@ def build_image():
     with open(info_path, "w") as f:
         json.dump({
             "precip_ts": precip_ts,
-            "text": dt.datetime.fromtimestamp(precip_ts).strftime("%Y-%m-%d %H:%M:%S") + " + "+ f"{FORECAST_SECS//60} mins forecast",
+            "text": dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime("%Y-%m-%d %H:%M:%S") + " + "+ f"{FORECAST_SECS//60} mins forecast",
         }, f)
     qr_code_image()
 
