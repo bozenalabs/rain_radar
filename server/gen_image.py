@@ -35,15 +35,20 @@ def get_snapshot_timestamp():
 
 
 def get_tile_handler(snapshot_timestamp: int, zoom: int, x: int, y: int):
-    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{FORECAST_SECS}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
     # ipdb.set_trace()
+    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{FORECAST_SECS}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
+    # ipdb.set_trace()p
+    print(url)
     response = requests.get(url, stream=True, timeout=10)
     return response
 
 
-ZOOM = 5
-TILE_X = 15
-TILE_Y = 9
+# ZOOM = 10
+# TILE_X = 511
+# TILE_Y = 340
+ZOOM = 7
+TILE_X = 63
+TILE_Y = 42
 
 
 def download_precip_image():
@@ -172,9 +177,10 @@ def test():
 
 
 def build_pretty_map():
+    geo_df_loocation = tile_xyz_to_geodataframe(TILE_X, TILE_Y, ZOOM)
+
     prettymaps.plot(
-        api_secrets.location_query,
-        radius=10000,
+        geo_df_loocation,
         preset=None,
         use_preset=False,
         circle=None,
@@ -194,7 +200,7 @@ def build_pretty_map():
                     # "pedestrian": 2,
                     # "footway": 1,
                 },
-                "custom_filter":'["highway"~"motorway|trunk|primary"]',
+                "custom_filter":'["highway"~"motorway|trunk"]',
             },
             # "waterway": {
             #     "tags": {"waterway": ["river", "stream"]},
@@ -220,7 +226,7 @@ def build_pretty_map():
             },
             "forest": {"fc": "#5D5D5D", "ec": "#575757", "lw": 0, "zorder": 2},
             "water": {
-                "fc": "#acacac",
+                "fc": "#003da6",
                 # "ec": "#2F3737",
                 # "hatch_c": "#000000",
                 # "hatch": "ooo...",
@@ -228,7 +234,7 @@ def build_pretty_map():
                 "zorder": 99,
             },
             "sea": {
-                "fc": "#acacac",
+                "fc": "#003da6",
                 # "ec": "#2F3737",
                 # "hatch_c": "#000000",
                 # "hatch": "ooo...",
@@ -236,7 +242,7 @@ def build_pretty_map():
                 "zorder": 99,
             },
             "waterway": {
-                "fc": "#acacac",
+                "fc": "#003da6",
                 # "ec": "#2F3737",
                 # "hatch_c": "#000000",
                 # "hatch": "ooo...",
@@ -276,7 +282,6 @@ def build_image():
     # download_map_image()
     build_pretty_map()
     MAP_TILE_FILE = Path("pretty_map.png")
-
 
     precip_ts =  download_precip_image()
     info_path = COMBINED_FILE.parent / "image_info.txt"

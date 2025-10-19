@@ -55,6 +55,9 @@ https://doc.rainbow.ai/api-ref/tiles/
 See API usage:
 https://developer.rainbow.ai/reports
 
+I've found `prettymaps` to be quite slow.
+maptiler.com is much beter and easier to use for this use case.
+
 
 ### hosting data
 
