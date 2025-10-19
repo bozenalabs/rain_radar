@@ -11,6 +11,7 @@ import datetime as dt
 import ipdb
 import argparse
 import shutil
+from PIL import ImageDraw, ImageFont
 
 
 IMAGES_DIR = Path("images")
@@ -23,8 +24,6 @@ COMBINED_FILE = IMAGES_DIR / ("combined.jpg")
 QUANTIZED_FILE = IMAGES_DIR / ("quantized.bin")
 IMAGE_INFO_FILE = IMAGES_DIR / ("image_info.txt")
 
-FORECAST_SECS = 600  # 10 minutes
-
 
 def get_snapshot_timestamp():
     response = requests.get(
@@ -33,8 +32,8 @@ def get_snapshot_timestamp():
     return response.json()["snapshot"]
 
 
-def get_tile_handler(snapshot_timestamp: int, zoom: int, x: int, y: int):
-    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{FORECAST_SECS}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
+def get_tile_handler(zoom: int, x: int, y: int, snapshot_timestamp: int, forecast_secs: int):
+    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{forecast_secs}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
     # print(url)
     response = requests.get(url, stream=True, timeout=10)
     return response
@@ -48,12 +47,12 @@ TILE_X = 63
 TILE_Y = 42
 
 
-def download_precip_image(zoom, tile_x, tile_y, ts):
-    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}_{ts}.png"
+def download_precip_image(zoom, tile_x, tile_y, ts, forecast_secs):
+    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}_{ts}_{forecast_secs}.png"
     if not file_path.exists():
         print("Downloading forecast image...")
 
-        response = get_tile_handler(ts, zoom, tile_x, tile_y)
+        response = get_tile_handler(zoom, tile_x, tile_y, ts, forecast_secs)
         assert response.status_code == 200
 
         with open(file_path, "wb") as f:
@@ -101,14 +100,14 @@ def qr_code_image():
 DESIRED_WIDTH = 800
 DESIRED_HEIGHT = 480
 
-def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_end_y, ts):
+def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_end_y, ts, forecast_secs):
     map_tiles = {}
     precip_tiles = {}
     for x in range(tile_start_x, tile_end_x + 1):
         for y in range(tile_start_y, tile_end_y + 1):
             im_path = download_map_image(zoom, x, y)
             map_tiles[(x, y)] = Image.open(im_path)
-            im_path = download_precip_image(zoom, x, y, ts)
+            im_path = download_precip_image(zoom, x, y, ts, forecast_secs)
             precip_tiles[(x, y)] = Image.open(im_path)
 
     # assert all the values of each on the same size
@@ -140,18 +139,15 @@ def build_image():
 
     precip_ts = get_snapshot_timestamp()
     print(f"Snapshot timestamp: {precip_ts}")
-    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts)
+    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts, 0)
+    FORECAST_SECS = 1200  # 20 minutes
+    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts, FORECAST_SECS)
 
     with open(IMAGE_INFO_FILE, "w") as f:
+        image_text = dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime(
+                "%Y-%m-%d %H:%M:%S") + " + " + f"{FORECAST_SECS//60} mins forecast"
         f.write(f"precip_ts={precip_ts}\n")
-        text = (
-            dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-            + " + "
-            + f"{FORECAST_SECS//60} mins forecast"
-        )
-        f.write(f"text={text}\n")
+        f.write(f"text={image_text}\n")
 
     qr_code_image()
 
@@ -165,8 +161,6 @@ def build_image():
 
     combined = Image.alpha_composite(map_img, precip_img)
 
-    
-    # combined.paste(qr_img, (1, 52)) # near the top left corner
 
     combined = combined.convert("RGB")
     current_width, current_height = combined.size
@@ -196,7 +190,6 @@ def build_image():
 
     combined = combined.crop(bounding_box)
 
-    
     # zoom into the center quarter of the image
     width, height = combined.size
     scale = 0.7
@@ -212,7 +205,6 @@ def build_image():
     combined = combined.resize(
         (DESIRED_WIDTH, DESIRED_HEIGHT), resample=Image.BILINEAR
     )
-
 
 
     convert_to_bitmap(combined)
@@ -261,6 +253,30 @@ def convert_to_bitmap(img):
         palette=pal_img, dither=Image.Dither.FLOYDSTEINBERG
     )
 
+    if add_qr_code := False:
+        combined.paste(qr_img, (1, 52)) # near the top left corner
+
+    if add_text := True:
+        with open(IMAGE_INFO_FILE, "r") as f:
+            lines = f.readlines()
+            image_text = lines[1].strip().split("=")[1]
+
+
+        # draw image_text in the lower-left corner with a semi-transparent background
+        draw = ImageDraw.Draw(quantized_img)
+        
+        # https://www.dafont.com/minecraftia.font
+        font = ImageFont.truetype("Minecraftia-Regular.ttf", 18)
+
+        padding = 8
+        x = padding
+        y = quantized_img.size[1] - 18 - padding
+
+        print(f"Adding text to image: {image_text}")
+
+        # text (white)
+        draw.text((x, y), image_text, font=font, fill=(255, 255, 255))
+
     # draw color swatches across the top edge using palette indices
 
     # num_colors = len(PALETTE) // 3
@@ -274,7 +290,7 @@ def convert_to_bitmap(img):
     #             quantized_img.putpixel((x, y), i)
 
     # so we can see it
-    quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
+    quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.png"))
 
     # for other picos, the frame buffer on the pico is logically 3 single bit planes one after anther.
     # plane_0[x,y] = bit 0 of color
