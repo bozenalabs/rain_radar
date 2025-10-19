@@ -12,7 +12,7 @@ from api_secrets import RAINBOW_API_TOKEN
 
 PRECIP_TILE_FILE = Path("forecast.png")
 MAP_TILE_FILE = Path("map.png")
-COMBINED_FILE = Path("combined.jpg")
+COMBINED_FILE = Path("publicly_available/combined.jpg")
 
 
 def get_snapshot_timestamp():
