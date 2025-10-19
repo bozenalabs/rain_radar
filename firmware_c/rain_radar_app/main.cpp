@@ -19,70 +19,45 @@
 #include "pimoroni_common.hpp"
 #include "secrets.h"
 
-
 using namespace pimoroni;
 
 
+void draw_error(InkyFrame &graphics, const std::string_view &msg)
+{
 
-static const std::string URL = "https://muse-hub.taile8f45.ts.net/";
-
-void draw_error(InkyFrame &graphics, const std::string_view &msg) {
   graphics.set_pen(Inky73::RED);
-  graphics.rectangle(Rect(graphics.width / 2, graphics.height -25, graphics.width / 2, 25));
+  graphics.rectangle(Rect(graphics.width / 2, graphics.height - 25, graphics.width / 2, 25));
   graphics.set_pen(Inky73::WHITE);
-  graphics.text(msg, Point(graphics.width / 2 + 5, graphics.height -22), graphics.width / 2, 2);
+  graphics.text(msg, Point(graphics.width / 2 + 5, graphics.height - 22), graphics.width / 2, 2);
 }
 
-void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg) {
+void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
+{
   graphics.set_pen(Inky73::BLACK);
-  graphics.rectangle(Rect(0, graphics.height -25, graphics.width / 2, 25));
+  graphics.rectangle(Rect(0, graphics.height - 25, graphics.width / 2, 25));
   graphics.set_pen(Inky73::WHITE);
-  graphics.text(msg, Point(5, graphics.height -22), graphics.width / 2, 2);
+  graphics.text(msg, Point(5, graphics.height - 22), graphics.width / 2, 2);
 }
 
 int main()
 {
   stdio_init_all();
-  sleep_ms(1000);
+  sleep_ms(500);
 
   InkyFrame inky_frame;
   inky_frame.init();
 
-  for (int i = 0; i < 3; i++)
-  {
-    printf("Inky Frame init done %d\n", i);
-    fflush(stdout);
-    sleep_ms(1000);
-  }
-
   if (!wifi_connect(inky_frame))
   {
     printf("Failed to connect to WiFi\n");
-    fflush(stdout);
-
     draw_error(inky_frame, "Failed to connect to WiFi");
     inky_frame.update(true);
     return -1;
   }
 
-  while (true)
-  {
-    printf("Connected!\n");
-    sleep_ms(1000);
-  }
-
   draw_error(inky_frame, "test error");
   draw_lower_left_text(inky_frame, "Pico Rain Radar");
   inky_frame.update(true);
-
-  int i = 0;
-
-  while (true)
-  {
-    printf("Pico Rain Radar\n");
-    printf("Attempt %d to init display\n", i++);
-    sleep_ms(1000);
-  }
 
   printf("Done\n");
 

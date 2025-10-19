@@ -19,9 +19,8 @@ namespace
   {
   public:
     NetworkLedController(std::shared_ptr<InkyFrame> frame, int speed_hz)
-        : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz)
-    {
-    };
+        : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz) {
+          };
 
     repeating_timer_t network_led_timer;
     std::shared_ptr<InkyFrame> const inky_frame;
@@ -48,7 +47,6 @@ namespace
     void start_pulse_network_led()
     {
 
-
       add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
       // important that user_data is set after the timer is added
 
@@ -57,7 +55,7 @@ namespace
 
     void stop_pulse_network_led()
     {
-        cancel_repeating_timer(&network_led_timer);
+      cancel_repeating_timer(&network_led_timer);
     };
   };
 }
@@ -121,7 +119,8 @@ bool wifi_connect(InkyFrame &inky_frame)
       printf("Wifi status: LINK_BADAUTH (authentication failure)\n");
       break;
     default:
-      if (link_status < 0) {
+      if (link_status < 0)
+      {
         printf("Wifi status: Unknown error %d\n", link_status);
       }
       break;
@@ -134,6 +133,7 @@ bool wifi_connect(InkyFrame &inky_frame)
   return false;
 }
 
-void network_deinit() {
+void network_deinit()
+{
   cyw43_arch_deinit();
 }
