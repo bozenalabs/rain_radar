@@ -115,7 +115,3 @@ def network_connect(SSID, PSK):
         stop_network_led()
         led_warn.on()
 
-
-state = {"run": None}
-app = None
-

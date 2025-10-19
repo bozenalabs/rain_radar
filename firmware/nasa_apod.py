@@ -9,17 +9,11 @@ graphics = None
 WIDTH = None
 HEIGHT = None
 
-FILENAME = "nasa-apod-daily"
-
-# A Demo Key is used in this example and is IP rate limited. You can get your own API Key from https://api.nasa.gov/
-API_URL = "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
+FILENAME = "nasa-apod-daily.jpg"
 
 # Length of time between updates in minutes.
 # Frequent updates will reduce battery life!
 UPDATE_INTERVAL = 240
-
-# Variable for storing the NASA APOD Title
-apod_title = None
 
 BLACK = 0
 WHITE = 1
@@ -39,28 +33,7 @@ def show_error(text):
 
 
 def update():
-    global apod_title
-
-    if HEIGHT == 448:
-        # Image for Inky Frame 5.7
-        IMG_URL = "https://pimoroni.github.io/feed2image/nasa-apod-daily.jpg"
-    elif HEIGHT == 400:
-        # Image for Inky Frame 4.0
-        IMG_URL = "https://pimoroni.github.io/feed2image/nasa-apod-640x400-daily.jpg"
-    elif HEIGHT == 480:
-        IMG_URL = "https://pimoroni.github.io/feed2image/nasa-apod-800x480-daily.jpg"
-
-    try:
-        # Grab the data
-        socket = urequest.urlopen(API_URL)
-        gc.collect()
-        j = load(socket)
-        socket.close()
-        apod_title = j['title']
-        gc.collect()
-    except OSError as e:
-        print(e)
-        apod_title = "Image Title Unavailable"
+    IMG_URL = "https://muse-hub.taile8f45.ts.net/combined.jpg"
 
     try:
         # Grab the image
@@ -103,8 +76,6 @@ def draw():
     graphics.rectangle(0, HEIGHT - 25, WIDTH, 25)
     graphics.set_pen(WHITE)
     graphics.text("testing2", 5, HEIGHT - 20, WIDTH, 2)
-
-
+   
     gc.collect()
-
     graphics.update()

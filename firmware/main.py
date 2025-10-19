@@ -43,5 +43,7 @@ while True:
     app.update()
     ih.led_warn.on()
     app.draw()
+    print("finished draw")
     ih.led_warn.off()
     ih.sleep(app.UPDATE_INTERVAL)
+
