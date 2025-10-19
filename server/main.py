@@ -3,16 +3,12 @@ import requests
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-# if token := os.environ.get("RAINBOW_API_TOKEN"):
-#     RAINBOW_API_TOKEN = token
 from PIL import Image, ImageEnhance
 import qrcode
 
 import api_secrets 
-import json
 import datetime as dt
 import ipdb
-import math
 import argparse
 import shutil
 

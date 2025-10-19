@@ -118,9 +118,10 @@ namespace data_fetching
         pimoroni::PSRamDisplay &psram_display;
         size_t const max_address_write;
         size_t offset = 0;
+        Err result;
 
         ImageWriterHelper(pimoroni::InkyFrame &inky_frame)
-            : psram_display(inky_frame.ramDisplay), max_address_write(inky_frame.width * inky_frame.height), offset(0)
+            : psram_display(inky_frame.ramDisplay), max_address_write(inky_frame.width * inky_frame.height), offset(0), result(Err::OK)
         {
         }
     };
@@ -157,6 +158,13 @@ namespace data_fetching
         return ERR_OK;
     }
 
+    void result_fn(void *arg, httpc_result_t httpc_result, u32_t rx_content_len, u32_t srv_res, err_t err) {
+        // httpc_result is already passed as req->result.
+        // set arg to result
+        ImageWriterHelper *image_writer = (ImageWriterHelper *)arg;
+        image_writer->result = httpStatusToErr(srv_res);
+    }
+
     Err fetch_image(pimoroni::InkyFrame &inky_frame, int8_t connected_ssid_index)
     {
         printf("Fetching image for SSID index %d\n", connected_ssid_index);
@@ -182,9 +190,18 @@ namespace data_fetching
         struct altcp_tls_config *tls_config = altcp_tls_create_config_client(NULL, 0);
         assert(tls_config);
         req.tls_config = tls_config; // setting tls_config enables https
+
+        req.result_fn = result_fn;
+
         int result = http_client_util::http_client_request_sync(cyw43_arch_async_context(), &req);
         altcp_tls_free_config(tls_config);
-        return httpStatusToErr(result);
+
+        if (image_writer.result != Err::OK)
+        {
+            return image_writer.result;
+        }
+
+        return result ? Err::ERROR : Err::OK;
     }
 
 }

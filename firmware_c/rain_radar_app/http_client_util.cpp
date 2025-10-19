@@ -153,7 +153,7 @@ namespace http_client_util
         return ret;
     }
 
-    // Make a http request and only return when it has completed. Returns true on success
+    // Make a http request and only return when it has completed.
     int http_client_request_sync(async_context_t *context, http_req_t *req)
     {
         assert(req);
