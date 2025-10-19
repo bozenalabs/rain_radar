@@ -303,11 +303,12 @@ if __name__ == "__main__":
 
     build_image()
     if args.deploy:
-        deploy_dir = Path("publicly_available/")
-        deploy_dir.mkdir(exist_ok=True)
-        shutil.copy(COMBINED_FILE, deploy_dir / COMBINED_FILE.name)
-        shutil.copy(QUANTIZED_FILE, deploy_dir / QUANTIZED_FILE.name)
-        shutil.copy(IMAGE_INFO_FILE, deploy_dir / IMAGE_INFO_FILE.name)
-        print(f"Copied images to {deploy_dir}")
+        for i in range(10):
+            deploy_dir = Path(f"publicly_available/{i}")
+            deploy_dir.mkdir(exist_ok=True)
+            shutil.copy(COMBINED_FILE, deploy_dir / COMBINED_FILE.name)
+            shutil.copy(QUANTIZED_FILE, deploy_dir / QUANTIZED_FILE.name)
+            shutil.copy(IMAGE_INFO_FILE, deploy_dir / IMAGE_INFO_FILE.name)
+            print(f"Copied images to {deploy_dir}")
 
 
