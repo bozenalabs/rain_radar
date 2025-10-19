@@ -41,9 +41,27 @@ void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
     graphics.text(msg, Point(5, graphics.height - 22), graphics.width / 2, 2);
 }
 
+constexpr int HOLD_VSYS_EN = 2;
+void inky_sleep(InkyFrame &frame, int wake_in_minutes) {
+    frame.rtc.clear_timer_flag();
+    if(wake_in_minutes != -1) {
+      frame.rtc.set_timer(wake_in_minutes, PCF85063A::TIMER_TICK_1_OVER_60HZ);
+      frame.rtc.enable_timer_interrupt(true, false);
+    }
+
+    gpio_put(HOLD_VSYS_EN, false);
+    printf("Sleeping for %d minutes\n", wake_in_minutes);
+    stdio_flush();
+    sleep_ms(std::max(10'000, wake_in_minutes * 60 * 1000));
+    stdio_flush();
+    printf("Waking up\n");
+    watchdog_reboot(0, 0, 0);
+    while(true) {}
+}
 
 int main()
 {
+
     stdio_init_all();
     sleep_ms(2000);
 
@@ -91,9 +109,10 @@ int main()
     inky_frame.update(true);
 
     wifi_setup::network_deinit(inky_frame);
-    constexpr int SLEEP_AFTER_UPDATE_MINUTES = 1;
+    const int SLEEP_AFTER_UPDATE_MINUTES = 1;
     printf("Done, sleeping for %d\n", SLEEP_AFTER_UPDATE_MINUTES);
-    inky_frame.sleep(SLEEP_AFTER_UPDATE_MINUTES);
-    // watchdog_reboot(0, 0, 0);
+    inky_sleep(inky_frame, SLEEP_AFTER_UPDATE_MINUTES);
+    printf("here\n");
+    
     return 0;
 }

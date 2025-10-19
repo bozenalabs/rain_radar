@@ -45,6 +45,7 @@ target_link_libraries(${NAME}
     hardware_spi
     hardware_i2c
     hardware_flash
+    hardware_rtc
     fatfs
     sdcard
     pico_graphics
