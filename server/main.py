@@ -17,12 +17,16 @@ import io
 IMAGES_DIR = Path("images")
 IMAGES_DIR.mkdir(exist_ok=True)
 
-PRECIP_TILE_FILE = IMAGES_DIR / ("forecast.png")
+PRECIP_NOW_TILE_FILE = IMAGES_DIR / ("precip_now.png")
+PRECIP_FORECAST_TILE_FILE = IMAGES_DIR / ("precip_forecast.png")
 MAP_TILE_FILE = IMAGES_DIR / ("map.png")
 QRCODE_FILE = IMAGES_DIR / ("qrcode.png")
 COMBINED_FILE = IMAGES_DIR / ("combined.jpg")
 QUANTIZED_FILE = IMAGES_DIR / ("quantized.bin")
 IMAGE_INFO_FILE = IMAGES_DIR / ("image_info.txt")
+
+INTENSITY_MIN = 9
+INTENSITY_MAX = 127
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -70,24 +74,27 @@ def lerp_color(color1: tuple, color2: tuple, t: float) -> tuple:
     return tuple(int(c1 + (c2 - c1) * t) for c1, c2 in zip(color1, color2))
 
 
+import functools as ft
+
+@ft.lru_cache(maxsize=None)
 def intensity_to_color(intensity: int) -> tuple:
     """Convert DBZ intensity (0-127) to color with linear interpolation between palette colors"""
-    if intensity == 0:
-        return (0, 0, 0)  # Black for no precipitation
+    if intensity <= INTENSITY_MIN:
+        return (0, 0, 0, 0)  # Black for no precipitation
     
     # Define color stops with intensity values (0-127 range)
     color_stops = [
-        (0, BLACK),      # No precipitation
-        (10, GREEN),     # Light precipitation  
-        (30, BLUE),      # Moderate precipitation
-        (50, YELLOW),    # Heavy precipitation
-        (70, ORANGE),    # Very heavy precipitation
-        (100, RED),      # Extreme precipitation
-        (127, WHITE),    # Maximum intensity
+        (0, BLACK + (255,)),      # No precipitation
+        (10, GREEN + (255,)),     # Light precipitation
+        (30, BLUE + (255,)),      # Moderate precipitation
+        (50, YELLOW + (255,)),    # Heavy precipitation
+        (70, ORANGE + (255,)),    # Very heavy precipitation
+        (100, RED + (255,)),      # Extreme precipitation
+        (127, WHITE + (255,)),    # Maximum intensity
     ]
     
     # Clamp intensity to valid range
-    intensity = max(0, min(127, intensity))
+    intensity = max(INTENSITY_MIN, min(INTENSITY_MAX, intensity))
     
     # Find the two color stops to interpolate between
     for i in range(len(color_stops) - 1):
@@ -104,8 +111,7 @@ def intensity_to_color(intensity: int) -> tuple:
             # Interpolate between the two colors
             return lerp_color(color1, color2, t)
     
-    # Fallback (should not reach here)
-    return RED
+    assert False, "Should not reach here"
 
 
 def process_dbz_u8(img: Image) -> Image:
@@ -130,8 +136,7 @@ def process_dbz_u8(img: Image) -> Image:
             processed_pixels.append((255, 255, 255, a))
         else:
             # this is the interesting part, we can transform dbz to our colour palette
-            color = intensity_to_color(r)  # r is the intensity value (same as g and b)
-            processed_pixels.append((*color, a))  # Use palette color with original alpha 
+            processed_pixels.append(intensity_to_color(r))  # Use palette color with original alpha
     
     # Create new image with processed pixels
     processed_img = Image.new("RGBA", img.size)
@@ -196,44 +201,52 @@ DESIRED_HEIGHT = 480
 
 def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_end_y, ts, forecast_secs):
     map_tiles = {}
-    precip_tiles = {}
+    precip_tiles_now = {}
+    precip_tiles_forecast = {}
     for x in range(tile_start_x, tile_end_x + 1):
         for y in range(tile_start_y, tile_end_y + 1):
             im_path = download_map_image(zoom, x, y)
             map_tiles[(x, y)] = Image.open(im_path)
+            im_path = download_precip_image(zoom, x, y, ts, 0)
+            precip_tiles_now[(x, y)] = Image.open(im_path)
             im_path = download_precip_image(zoom, x, y, ts, forecast_secs)
-            precip_tiles[(x, y)] = Image.open(im_path)
+            precip_tiles_forecast[(x, y)] = Image.open(im_path)
 
     # assert all the values of each on the same size
     assert len(set(im.size for im in map_tiles.values())) == 1
-    assert len(set(im.size for im in precip_tiles.values())) == 1
+    assert len(set(im.size for im in precip_tiles_now.values())) == 1
+    assert len(set(im.size for im in precip_tiles_forecast.values())) == 1
 
     num_tiles_x = tile_end_x - tile_start_x + 1
     num_tiles_y = tile_end_y - tile_start_y + 1
 
     map_tile_width, map_tile_height = next(iter(map_tiles.values())).size
-    precip_tile_width, precip_tile_height = next(iter(precip_tiles.values())).size
+    precip_tile_width, precip_tile_height = next(iter(precip_tiles_forecast.values())).size
+
 
     combined_map = Image.new("RGB", (map_tile_width * num_tiles_x, map_tile_height * num_tiles_y))
-    combined_precip = Image.new("RGBA", (precip_tile_width * num_tiles_x, precip_tile_height * num_tiles_y))
+    combined_precip_now = Image.new("RGBA", (precip_tile_width * num_tiles_x, precip_tile_height * num_tiles_y))
+    combined_precip_forecast = Image.new("RGBA", (precip_tile_width * num_tiles_x, precip_tile_height * num_tiles_y))
 
     # combine the tiles into one image
     for ix, x in enumerate(range(tile_start_x, tile_end_x + 1)):
         for iy, y in enumerate(range(tile_start_y, tile_end_y + 1)):
             map_tile = map_tiles[(x, y)]
-            precip_tile = precip_tiles[(x, y)]
+            precip_tile_now = precip_tiles_now[(x, y)]
+            precip_tile_forecast = precip_tiles_forecast[(x, y)]
             combined_map.paste(map_tile, (ix * map_tile_width, iy * map_tile_height))
-            combined_precip.paste(precip_tile, (ix * precip_tile_width, iy * precip_tile_height))
+            combined_precip_now.paste(precip_tile_now, (ix * precip_tile_width, iy * precip_tile_height))
+            combined_precip_forecast.paste(precip_tile_forecast, (ix * precip_tile_width, iy * precip_tile_height))
 
     combined_map.save(MAP_TILE_FILE)
-    combined_precip.save(PRECIP_TILE_FILE)
+    combined_precip_now.save(PRECIP_NOW_TILE_FILE)
+    combined_precip_forecast.save(PRECIP_FORECAST_TILE_FILE)
     print("Combined map and precipitation tiles into single images.")
 
 def build_image():
 
     precip_ts = get_snapshot_timestamp()
     print(f"Snapshot timestamp: {precip_ts}")
-    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts, 0)
     FORECAST_SECS = 1200  # 20 minutes
     download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts, FORECAST_SECS)
 
@@ -246,14 +259,22 @@ def build_image():
     qr_code_image()
 
     map_img = Image.open(MAP_TILE_FILE).convert("RGBA")
-    precip_img = Image.open(PRECIP_TILE_FILE).convert("RGBA")
+    precip_now_img = Image.open(PRECIP_NOW_TILE_FILE).convert("RGBA")
+    precip_forecast_img = Image.open(PRECIP_FORECAST_TILE_FILE).convert("RGBA")
     qr_img = Image.open(QRCODE_FILE).convert("RGBA")
 
-    assert map_img.size[0] / map_img.size[1] == precip_img.size[0] / precip_img.size[1]
+    # turn the old precip data into the lightest intensity
+    # and draw the forecast over it
+    # precip_now_img = precip_now_img.
+    precip_combined_img = Image.new("RGBA", precip_now_img.size)
+    precip_combined_img = Image.alpha_composite(precip_combined_img, precip_now_img)
+    precip_combined_img = Image.alpha_composite(precip_combined_img, precip_forecast_img)
 
-    precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
+    assert map_img.size[0] / map_img.size[1] == precip_combined_img.size[0] / precip_combined_img.size[1]
 
-    combined = Image.alpha_composite(map_img, precip_img)
+    precip_combined_img = precip_combined_img.resize(map_img.size, resample=Image.BILINEAR)
+
+    combined = Image.alpha_composite(map_img, precip_combined_img)
 
 
     combined = combined.convert("RGB")
@@ -316,16 +337,6 @@ def convert_to_bitmap(img):
 
     pal_img.putpalette(INKY_FRAME_PALETTE, rawmode="RGB")
 
-    # num_colors = len(INKY_FRAME_PALETTE) // 3
-    # for i in range(num_colors):
-    #     swatch_width = 70
-    #     swatch_height = 30
-    #     x0 = 100 + i * swatch_width
-    #     x1 = min(x0 + swatch_width, DESIRED_WIDTH)
-    #     for x in range(x0, x1):
-    #         for y in range(0, swatch_height):
-    #             quantized_img.putpixel((x, y), i)
-
     # draw a bar in the bottom right showing the colour intesity legend using intensity_to_color
     if add_legend := True:
         legend_width = 400
@@ -333,10 +344,11 @@ def convert_to_bitmap(img):
         legend_height = 16
         legend_start_y = DESIRED_HEIGHT - legend_height - 3
         for i in range(int(legend_width)):
-            intensity = int((i / legend_width) * 127)
+            intensity = int((i / legend_width) * (INTENSITY_MAX - INTENSITY_MIN) + INTENSITY_MIN)
             color = intensity_to_color(intensity)
-            for y in range(int(legend_height)):
-                img.putpixel((int(legend_start_x + i), int(legend_start_y + y)), color)
+            if color[3] != 0:
+                for y in range(int(legend_height)):
+                    img.putpixel((int(legend_start_x + i), int(legend_start_y + y)), color)
 
     # Open the source image and quantize it to our palette
     quantized_img = img.convert("RGB").quantize(
@@ -347,8 +359,6 @@ def convert_to_bitmap(img):
         combined.paste(qr_img, (1, 52)) # near the top left corner
 
     if add_text := True:
-
-
         TEXT_HEIGHT = 16
         with open(IMAGE_INFO_FILE, "r") as f:
             lines = f.readlines()
@@ -370,9 +380,6 @@ def convert_to_bitmap(img):
 
         draw.text((x, y), image_text, font=font, fill=(0, 0, 0), stroke_width=3, stroke_fill=(0,0,0))
         draw.text((x, y), image_text, font=font, fill=(255, 255, 255))
-
-    # draw color swatches across the top edge using palette indices
-
 
 
     # so we can see it
