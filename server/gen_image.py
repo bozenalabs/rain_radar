@@ -6,12 +6,14 @@ from pathlib import Path
 # if token := os.environ.get("RAINBOW_API_TOKEN"):
 #     RAINBOW_API_TOKEN = token
 from PIL import Image, ImageEnhance
+import qrcode
 
 from api_secrets import RAINBOW_API_TOKEN
 
 
 PRECIP_TILE_FILE = Path("forecast.png")
 MAP_TILE_FILE = Path("map.png")
+QRCODE_FILE = Path("qrcode.png")
 COMBINED_FILE = Path("publicly_available/combined.jpg")
 
 
@@ -55,27 +57,41 @@ def download_map_image(save_path: Path):
 
     return r.content
 
+
+def qr_code_image():
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=1,
+        border=1,
+    )
+    qr.add_data("https://weather.metoffice.gov.uk/maps-and-charts/rainfall-radar-forecast-map#?model=ukmo-ukv&layer=rainfall-rate&bbox=[[50.75904732375726,-2.4554443359375004],[52.22948173332481,2.2906494140625004]]")
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+    img.save(QRCODE_FILE)
+    print("Saved QR code image.")
+
 def build_image():
     download_map_image(MAP_TILE_FILE)
     download_precip_image()
-
+    qr_code_image()
 
     desired_width = 800
     desired_height = 480
 
-    with Image.open(MAP_TILE_FILE).convert("RGBA") as map_img, Image.open(PRECIP_TILE_FILE).convert("RGBA") as precip_img:
+    with Image.open(MAP_TILE_FILE).convert("RGBA") as map_img, Image.open(PRECIP_TILE_FILE).convert("RGBA") as precip_img, Image.open(QRCODE_FILE).convert("RGBA") as qr_img:
         if map_img.size != precip_img.size:
             precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
         combined = Image.alpha_composite(map_img, precip_img)
+        combined.paste(qr_img, (1,52))
         rgb_image = combined.convert("RGB")
         current_width, current_height = rgb_image.size
         if current_width / current_height > desired_width / desired_height:
             # too wide
             cropped_width = current_height * desired_width / desired_height
             assert cropped_width <= current_width
-
             cropped_width_start = (current_width - cropped_width) / 2
-
             bounding_box = (cropped_width_start, 0, cropped_width+cropped_width_start, current_height)
         else:
             # too tall
