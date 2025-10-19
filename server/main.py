@@ -279,8 +279,8 @@ def build_image():
 
     precip_combined_img = precip_combined_img.resize(map_img.size, resample=Image.BILINEAR)
 
-    combined = map_img
-    # combined = Image.alpha_composite(map_img, precip_combined_img)
+    # combined = map_img # no precip data
+    combined = Image.alpha_composite(map_img, precip_combined_img)
 
     combined = combined.convert("RGB")
     current_width, current_height = combined.size
