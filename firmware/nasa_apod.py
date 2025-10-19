@@ -104,8 +104,6 @@ def draw():
     graphics.set_pen(WHITE)
     graphics.text("testing2", 5, HEIGHT - 20, WIDTH, 2)
 
-    graphics.set_pen(TAUPE)
-    graphics.clear()
 
     gc.collect()
 

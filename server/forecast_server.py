@@ -6,7 +6,8 @@ import threading
 from flask import Flask, send_file
 from pathlib import Path
 
-from api_secrets import RAINBOW_API_TOKEN
+if token := os.environ.get("RAINBOW_API_TOKEN"):
+    RAINBOW_API_TOKEN = token
 from PIL import Image
 
 
@@ -80,6 +81,10 @@ def download_images_continually():
 def serve_forecast():
     return send_file(COMBINED_FILE, mimetype="image/png")
 
+c
+
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+
     threading.Thread(target=download_images_continually, daemon=True).start()
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=port)

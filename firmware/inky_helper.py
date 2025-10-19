@@ -85,11 +85,14 @@ def clear_button_leds():
 
 def network_connect(SSID, PSK):
     print("Connecting to network...")
+    print(f"SSID: {SSID}")
+    print(f"PSK: {PSK}")
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
+    # print(wlan.scan())
 
     # Number of attempts to make before timeout
-    max_wait = 10
+    max_wait = 15
 
     # Sets the Wireless LED pulsing and attempts to connect to your local network.
     pulse_network_led()
@@ -107,6 +110,7 @@ def network_connect(SSID, PSK):
 
     # Handle connection error. Switches the Warn LED on.
     if wlan.status() != 3:
+        print('network connection failed:', wlan.status())
         stop_network_led()
         led_warn.on()
 
