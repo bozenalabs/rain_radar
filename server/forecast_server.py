@@ -68,6 +68,7 @@ def build_image():
             precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
         combined = Image.alpha_composite(map_img, precip_img)
         rgb_image = combined.convert("RGB")
+        rgb_image = rgb_image.resize((desired_width,desired_height), resample=Image.BILINEAR)
         rgb_image.save(COMBINED_FILE)
         print("Combined map.png and forecast.png into one image.")
 
