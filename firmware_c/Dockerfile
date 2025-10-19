@@ -32,8 +32,7 @@ WORKDIR /home/appuser/pico
 RUN git clone --depth=1 --recursive -b master https://github.com/raspberrypi/pico-sdk.git
 ENV PICO_SDK_PATH=/home/appuser/pico/pico-sdk
 RUN git clone --depth=1 -b master https://github.com/raspberrypi/pico-examples.git
-RUN git clone --depth=1 -b main https://github.com/pimoroni/pimoroni-pico.git --recursive
-RUN git clone --depth=1 -b main https://github.com/pimoroni/picosystem.git
+# RUN git clone --depth=1 -b main https://github.com/pimoroni/pimoroni-pico.git --recursive
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
 

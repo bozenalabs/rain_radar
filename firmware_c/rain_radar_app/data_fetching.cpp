@@ -120,9 +120,8 @@ namespace data_fetching
         size_t offset = 0;
 
         ImageWriterHelper(pimoroni::InkyFrame &inky_frame)
-            : psram_display(inky_frame.ramDisplay), max_address_write(inky_frame.width * inky_frame.height)
+            : psram_display(inky_frame.ramDisplay), max_address_write(inky_frame.width * inky_frame.height), offset(0)
         {
-            offset = psram_display.pointToAddress({0, 0});
         }
     };
 
@@ -148,7 +147,7 @@ namespace data_fetching
             printf("Image data exceeds display size\n");
             return ERR_BUF;
         }
-        image_writer->psram_display.write(offset, body_len, (const uint8_t *)p->payload);
+        image_writer->psram_display.write_span(offset, body_len, (const uint8_t *)p->payload);
         image_writer->offset = new_offset;
 
         // https://forums.raspberrypi.com/viewtopic.php?t=385648
