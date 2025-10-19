@@ -421,7 +421,14 @@ def convert_to_bitmap(img):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--deploy", action="store_true", help="Copy the generated combined image to the deployment directory")
+    parser.add_argument("--clean-up", action="store_true", help="Delete old precipiation data")
     args = parser.parse_args()
+
+    if args.clean_up:
+        for file in IMAGES_DIR.glob("precip_*.png"):
+            if file.stat().st_mtime < dt.datetime.now().timestamp() - 7*24*3600:
+                print(f"Deleting old precipitation file: {file}")
+                file.unlink()
 
     build_image()
     if args.deploy:
