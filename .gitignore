@@ -2,3 +2,4 @@
 **/secrets.py
 **/api_secrets.py
 **/__pycache__/
+server/publicly_available/

@@ -5,7 +5,7 @@ from pathlib import Path
 
 # if token := os.environ.get("RAINBOW_API_TOKEN"):
 #     RAINBOW_API_TOKEN = token
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from api_secrets import RAINBOW_API_TOKEN
 
@@ -85,7 +85,8 @@ def build_image():
             bounding_box = (0, cropped_height_start, current_width, cropped_height+cropped_height_start)
 
         rgb_image = rgb_image.resize((desired_width,desired_height), box=bounding_box, resample=Image.BILINEAR)
-        rgb_image.save(COMBINED_FILE)
+        rgb_image = ImageEnhance.Color(rgb_image).enhance(1.3)
+        rgb_image.save(COMBINED_FILE, progressive=False, quality=85)
         print("Combined map.png and forecast.png into one image.")
 
 if __name__ == "__main__":
