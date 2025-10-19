@@ -13,18 +13,19 @@ import json
 import datetime as dt
 import ipdb
 import math
+import argparse
+import shutil
 
 
 IMAGES_DIR = Path("images")
 IMAGES_DIR.mkdir(exist_ok=True)
 
-DEPLOYMENT_DIR = Path("publicly_available")
-
 PRECIP_TILE_FILE = IMAGES_DIR / ("forecast.png")
 MAP_TILE_FILE = IMAGES_DIR / ("map.png")
 QRCODE_FILE = IMAGES_DIR / ("qrcode.png")
-COMBINED_FILE = Path("publicly_available/combined.jpg")
-QUANTIZED_FILE = Path("publicly_available/quantized.bin")
+COMBINED_FILE = IMAGES_DIR / ("combined.jpg")
+QUANTIZED_FILE = IMAGES_DIR / ("quantized.bin")
+IMAGE_INFO_FILE = IMAGES_DIR / ("image_info.txt")
 
 FORECAST_SECS = 600  # 10 minutes
 
@@ -105,8 +106,7 @@ def build_image():
     download_map_image()
 
     precip_ts =  download_precip_image()
-    info_path = COMBINED_FILE.parent / "image_info.txt"
-    with open(info_path, "w") as f:
+    with open(IMAGE_INFO_FILE, "w") as f:
         f.write(f"precip_ts={precip_ts}\n")
         text = (
             dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime(
@@ -201,16 +201,16 @@ def convert_to_bitmap(img):
     )
 
     # draw color swatches across the top edge using palette indices
-    num_colors = len(PALETTE) // 3
+    # num_colors = len(PALETTE) // 3
 
-    for i in range(num_colors):
-        swatch_width = 70
-        swatch_height = 30
-        x0 = 100 + i * swatch_width
-        x1 = min(x0 + swatch_width, DESIRED_WIDTH)
-        for x in range(x0, x1):
-            for y in range(0, swatch_height):
-                quantized_img.putpixel((x, y), i)
+    # for i in range(num_colors):
+    #     swatch_width = 70
+    #     swatch_height = 30
+    #     x0 = 100 + i * swatch_width
+    #     x1 = min(x0 + swatch_width, DESIRED_WIDTH)
+    #     for x in range(x0, x1):
+    #         for y in range(0, swatch_height):
+    #             quantized_img.putpixel((x, y), i)
 
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
@@ -236,4 +236,17 @@ def convert_to_bitmap(img):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--deploy", action="store_true", help="Copy the generated combined image to the deployment directory")
+    args = parser.parse_args()
+
     build_image()
+    if args.deploy:
+        deploy_dir = Path("publicly_available/")
+        deploy_dir.mkdir(exist_ok=True)
+        shutil.copy(COMBINED_FILE, deploy_dir / COMBINED_FILE.name)
+        shutil.copy(QUANTIZED_FILE, deploy_dir / QUANTIZED_FILE.name)
+        shutil.copy(IMAGE_INFO_FILE, deploy_dir / IMAGE_INFO_FILE.name)
+        print(f"Copied images to {deploy_dir}")
+
+

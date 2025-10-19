@@ -2,7 +2,7 @@
 **/secrets.py
 **/api_secrets.py
 **/__pycache__/
-server/publicly_available/
+**/publicly_available/
 **/secrets.h
-server/cache/
+**/cache/
 .venv/
