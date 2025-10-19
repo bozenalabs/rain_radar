@@ -24,6 +24,23 @@ COMBINED_FILE = IMAGES_DIR / ("combined.jpg")
 QUANTIZED_FILE = IMAGES_DIR / ("quantized.bin")
 IMAGE_INFO_FILE = IMAGES_DIR / ("image_info.txt")
 
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
+ORANGE = (255, 140, 0)
+
+INKY_FRAME_PALETTE = (
+    *BLACK,
+    *WHITE,
+    *GREEN,
+    *BLUE,
+    *RED,
+    *YELLOW,
+    *ORANGE,
+)
 
 def get_snapshot_timestamp():
     response = requests.get(
@@ -48,6 +65,49 @@ TILE_Y = 42
 
 
 
+def lerp_color(color1: tuple, color2: tuple, t: float) -> tuple:
+    """Linear interpolation between two colors"""
+    return tuple(int(c1 + (c2 - c1) * t) for c1, c2 in zip(color1, color2))
+
+
+def intensity_to_color(intensity: int) -> tuple:
+    """Convert DBZ intensity (0-127) to color with linear interpolation between palette colors"""
+    if intensity == 0:
+        return (0, 0, 0)  # Black for no precipitation
+    
+    # Define color stops with intensity values (0-127 range)
+    color_stops = [
+        (0, BLACK),      # No precipitation
+        (10, GREEN),     # Light precipitation  
+        (30, BLUE),      # Moderate precipitation
+        (50, YELLOW),    # Heavy precipitation
+        (70, ORANGE),    # Very heavy precipitation
+        (100, RED),      # Extreme precipitation
+        (127, WHITE),    # Maximum intensity
+    ]
+    
+    # Clamp intensity to valid range
+    intensity = max(0, min(127, intensity))
+    
+    # Find the two color stops to interpolate between
+    for i in range(len(color_stops) - 1):
+        intensity1, color1 = color_stops[i]
+        intensity2, color2 = color_stops[i + 1]
+        
+        if intensity1 <= intensity <= intensity2:
+            # Calculate interpolation factor (0.0 to 1.0)
+            if intensity2 == intensity1:
+                t = 0
+            else:
+                t = (intensity - intensity1) / (intensity2 - intensity1)
+            
+            # Interpolate between the two colors
+            return lerp_color(color1, color2, t)
+    
+    # Fallback (should not reach here)
+    return RED
+
+
 def process_dbz_u8(img: Image) -> Image:
     """Process dbz_u8 image: set pixel to pure white if red component & 128 == 128"""
     # Convert to RGBA to ensure we can work with individual color channels
@@ -66,10 +126,12 @@ def process_dbz_u8(img: Image) -> Image:
             # not rain data
             processed_pixels.append((0, 0, 0, 0))  # Keep fully transparent pixels as is
             continue
-        if r & 128 == 128:  # Check if bit 7 (128) is set in red component
-            processed_pixels.append((255, 255, 255, a))  # Pure white, keep alpha
+        if r & 128 == 128:  # Check if bit 7 (128) is set in red component, it is snow
+            processed_pixels.append((255, 255, 255, a))
         else:
-            processed_pixels.append((r, g, b, a))  # Keep original pixel
+            # this is the interesting part, we can transform dbz to our colour palette
+            color = intensity_to_color(r)  # r is the intensity value (same as g and b)
+            processed_pixels.append((*color, a))  # Use palette color with original alpha 
     
     # Create new image with processed pixels
     processed_img = Image.new("RGBA", img.size)
@@ -79,7 +141,7 @@ def process_dbz_u8(img: Image) -> Image:
 
 def download_precip_image(zoom, tile_x, tile_y, ts, forecast_secs):
     file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}_{ts}_{forecast_secs}_dbz_u8.png"
-    if not file_path.exists() or True:
+    if not file_path.exists(): # or True:
         print("Downloading forecast image...")
 
         response = get_tile_handler(zoom, tile_x, tile_y, ts, forecast_secs)
@@ -245,32 +307,6 @@ def build_image():
     print("Combined map.png and forecast.png into one image.")
 
 
-PALETTE = (
-    0,
-    0,
-    0,  # 1 Black
-    255,
-    255,
-    255,  # 2 White
-    0,
-    255,
-    0,  # 3 Green
-    0,
-    0,
-    255,  # 4 Blue
-    255,
-    0,
-    0,  # 5 Red
-    255,
-    255,
-    0,  # 6 Yellow
-    255,
-    140,
-    0,  # 7 Orange
-    255,
-    255,
-    255,  # ^3
-)
 
 
 def convert_to_bitmap(img):
@@ -278,7 +314,29 @@ def convert_to_bitmap(img):
     # Image to hold the quantize palette
     pal_img = Image.new("P", (1, 1))
 
-    pal_img.putpalette(PALETTE + (0, 0, 0) * 8 * 31, rawmode="RGB")
+    pal_img.putpalette(INKY_FRAME_PALETTE, rawmode="RGB")
+
+    # num_colors = len(INKY_FRAME_PALETTE) // 3
+    # for i in range(num_colors):
+    #     swatch_width = 70
+    #     swatch_height = 30
+    #     x0 = 100 + i * swatch_width
+    #     x1 = min(x0 + swatch_width, DESIRED_WIDTH)
+    #     for x in range(x0, x1):
+    #         for y in range(0, swatch_height):
+    #             quantized_img.putpixel((x, y), i)
+
+    # draw a bar in the bottom right showing the colour intesity legend using intensity_to_color
+    if add_legend := True:
+        legend_width = 400
+        legend_start_x = DESIRED_WIDTH - legend_width - 3
+        legend_height = 16
+        legend_start_y = DESIRED_HEIGHT - legend_height - 3
+        for i in range(int(legend_width)):
+            intensity = int((i / legend_width) * 127)
+            color = intensity_to_color(intensity)
+            for y in range(int(legend_height)):
+                img.putpixel((int(legend_start_x + i), int(legend_start_y + y)), color)
 
     # Open the source image and quantize it to our palette
     quantized_img = img.convert("RGB").quantize(
@@ -291,7 +349,7 @@ def convert_to_bitmap(img):
     if add_text := True:
 
 
-        TEXT_HEIGHT = 14
+        TEXT_HEIGHT = 16
         with open(IMAGE_INFO_FILE, "r") as f:
             lines = f.readlines()
             image_text = lines[1].strip().split("=")[1]
@@ -310,20 +368,12 @@ def convert_to_bitmap(img):
         print(f"Adding text to image: {image_text}")
 
 
-        draw.text((x, y), image_text, font=font, fill=(0, 0, 0), stroke_width=2, stroke_fill=(0,0,0))
+        draw.text((x, y), image_text, font=font, fill=(0, 0, 0), stroke_width=3, stroke_fill=(0,0,0))
         draw.text((x, y), image_text, font=font, fill=(255, 255, 255))
 
     # draw color swatches across the top edge using palette indices
 
-    num_colors = len(PALETTE) // 3
-    for i in range(num_colors):
-        swatch_width = 70
-        swatch_height = 30
-        x0 = 100 + i * swatch_width
-        x1 = min(x0 + swatch_width, DESIRED_WIDTH)
-        for x in range(x0, x1):
-            for y in range(0, swatch_height):
-                quantized_img.putpixel((x, y), i)
+
 
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.png"))
