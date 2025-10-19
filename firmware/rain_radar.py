@@ -99,10 +99,10 @@ def draw():
     if ih.file_exists(IMAGE_INFO_FILE_NAME):
         image_info = open_image_info()
         image_info_text = image_info["text"]
-        current_precip_ts = image_info.get("precip_ts", "")
+        current_precip_ts = image_info["precip_ts"]
         current_time = time.time()
-        if current_time - current_precip_ts > 20*60 and error_string == "":
-            error_string = f"Time diff too high: {current_time - current_precip_ts} secs"
+        if current_time - current_precip_ts > 30*60 and error_string == "":
+            error_string = f"Time diff too high: {current_time - current_precip_ts} secs (current_time: {current_time}, precip_ts: {current_precip_ts})"
     else:
         image_info_text = "No image info found"
         if error_string == "":
@@ -115,11 +115,10 @@ def draw():
     graphics.text(image_info_text, 5, HEIGHT - 20, WIDTH, 2)
    
     if error_string != "":
-        text = error_string
         graphics.set_pen(RED)
         graphics.rectangle(0, 10, WIDTH, 35)
         graphics.set_pen(WHITE)
-        graphics.text(text, 5, 16, 400, 2)
+        graphics.text(error_string, 5, 16, WIDTH - 5, 2)
 
     gc.collect()
     graphics.update()

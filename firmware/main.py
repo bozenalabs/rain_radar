@@ -3,7 +3,7 @@ import time
 from machine import reset
 import inky_helper as ih
 import rain_radar as app
-
+import ntptime
 # Uncomment the line for your Inky Frame display size
 # from picographics import PicoGraphics, DISPLAY_INKY_FRAME_4 as DISPLAY  # 4.0"
 # from picographics import PicoGraphics, DISPLAY_INKY_FRAME as DISPLAY      # 5.7"
@@ -30,9 +30,11 @@ app.HEIGHT = HEIGHT
 try:
     from secrets import WIFI_SSID, WIFI_PASSWORD
     ih.network_connect(WIFI_SSID, WIFI_PASSWORD)
+    ntptime.settime()
+
 except ImportError:
     print("Create secrets.py with your WiFi credentials")
-
+    #todo: retry?
 # Get some memory back, we really need it!
 gc.collect()
 
