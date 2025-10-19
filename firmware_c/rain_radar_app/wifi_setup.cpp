@@ -1,5 +1,5 @@
 
-#include "network_utils.hpp"
+#include "wifi_setup.hpp"
 
 #include <cmath>
 #include <memory>
@@ -9,6 +9,9 @@
 #include <pico/stdlib.h>
 #include "pimoroni_common.hpp"
 #include "pico/cyw43_arch.h"
+#include "secrets.h"
+#include "rain_radar_common.hpp"
+
 
 using namespace pimoroni;
 
@@ -51,7 +54,9 @@ namespace
   };
 }
 
-bool wifi_connect(InkyFrame &inky_frame)
+namespace wifi_setup
+{
+Result wifi_connect(InkyFrame &inky_frame)
 {
   NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
 
@@ -64,7 +69,7 @@ bool wifi_connect(InkyFrame &inky_frame)
   if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
   {
     printf("failed to initialise\n");
-    return 1;
+    return Result::NOT_INITIALISED;
   }
   printf("initialised\n");
 
@@ -77,7 +82,7 @@ bool wifi_connect(InkyFrame &inky_frame)
   else
   {
     printf("failed to start connection\n");
-    return false;
+    return Result::ERROR;
   }
 
   uint32_t t_start = millis();
@@ -98,7 +103,7 @@ bool wifi_connect(InkyFrame &inky_frame)
       printf("Connected!\n");
       led_controller.stop_pulse_network_led();
       inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
-      return true;
+      return Result::OK;
       break;
     case CYW43_LINK_FAIL:
       printf("Wifi status: LINK_FAIL (connection failed)\n");
@@ -121,10 +126,18 @@ bool wifi_connect(InkyFrame &inky_frame)
   }
   led_controller.stop_pulse_network_led();
   inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
-  return false;
+  return Result::TIMEOUT;
+}
+
+bool is_connected()
+{
+  int link_status = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+  return link_status == CYW43_LINK_JOIN;
 }
 
 void network_deinit()
 {
   cyw43_arch_deinit();
 }
+
+} // namespace wifi_setup

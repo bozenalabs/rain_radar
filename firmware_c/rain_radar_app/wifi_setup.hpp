@@ -6,10 +6,16 @@
 #include <pico/time.h>
 #include <pico/stdlib.h>
 #include "pimoroni_common.hpp"
-#include "secrets.h"
 #include "inky_frame_7.hpp"
+#include "rain_radar_common.hpp"
 
-using namespace pimoroni;
 
-bool wifi_connect(InkyFrame &inky_frame);
+namespace wifi_setup
+{
+
+Result wifi_connect(pimoroni::InkyFrame &inky_frame);
 void network_deinit();
+bool is_connected();
+
+
+}

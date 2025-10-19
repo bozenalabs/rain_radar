@@ -1,4 +1,5 @@
 #pragma once
 
+#include "rain_radar_common.hpp"
 
-bool test_fetch();
+Result test_fetch();

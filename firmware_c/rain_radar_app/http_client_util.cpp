@@ -4,12 +4,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+
+ // copied from https://github.com/raspberrypi/pico-examples/tree/master/pico_w/wifi/http_client
+
 #include <stdio.h>
 #include <string.h>
 #include "pico/async_context.h"
 #include "lwip/altcp.h"
 #include "lwip/altcp_tls.h"
-#include "my_example_http_client_util.hpp"
+#include "http_client_util.hpp"
 
 #ifndef HTTP_INFO
 #define HTTP_INFO printf
@@ -35,28 +38,11 @@
 #define HTTP_ERROR printf
 #endif
 
-// Print headers to stdout
-err_t http_client_header_print_fn(__unused httpc_state_t *connection, __unused void *arg, struct pbuf *hdr, u16_t hdr_len, __unused u32_t content_len) {
-    HTTP_INFO("\nheaders %u\n", hdr_len);
-    u16_t offset = 0;
-    while (offset < hdr->tot_len && offset < hdr_len) {
-        char c = (char)pbuf_get_at(hdr, offset++);
-        HTTP_INFOC(c);
-    }
-    return ERR_OK;
-}
 
-// Print body to stdout
-err_t http_client_receive_print_fn(__unused void *arg, __unused struct altcp_pcb *conn, struct pbuf *p, err_t err) {
-    HTTP_INFO("\ncontent err %d\n", err);
-    u16_t offset = 0;
-    while (offset < p->tot_len) {
-        char c = (char)pbuf_get_at(p, offset++);
-        HTTP_INFOC(c);
-    }
-    return ERR_OK;
-}
+namespace
+{
 
+using namespace http_client_util;
 
 static err_t internal_header_fn(httpc_state_t *connection, void *arg, struct pbuf *hdr, u16_t hdr_len, u32_t content_len) {
     assert(arg);
@@ -100,6 +86,34 @@ static struct altcp_pcb *altcp_tls_alloc_sni(void *arg, u8_t ip_type) {
     return pcb;
 }
 
+}
+
+
+namespace http_client_util
+{
+
+// Print headers to stdout
+err_t http_client_header_print_fn(__unused httpc_state_t *connection, __unused void *arg, struct pbuf *hdr, u16_t hdr_len, __unused u32_t content_len) {
+    HTTP_INFO("\nheaders %u\n", hdr_len);
+    u16_t offset = 0;
+    while (offset < hdr->tot_len && offset < hdr_len) {
+        char c = (char)pbuf_get_at(hdr, offset++);
+        HTTP_INFOC(c);
+    }
+    return ERR_OK;
+}
+
+// Print body to stdout
+err_t http_client_receive_print_fn(__unused void *arg, __unused struct altcp_pcb *conn, struct pbuf *p, err_t err) {
+    HTTP_INFO("\ncontent err %d\n", err);
+    u16_t offset = 0;
+    while (offset < p->tot_len) {
+        char c = (char)pbuf_get_at(p, offset++);
+        HTTP_INFOC(c);
+    }
+    return ERR_OK;
+}
+
 // Make a http request, complete when req->complete returns true
 int http_client_request_async(async_context_t *context, EXAMPLE_HTTP_REQUEST_T *req) {
 #if LWIP_ALTCP
@@ -138,4 +152,5 @@ int http_client_request_sync(async_context_t *context, EXAMPLE_HTTP_REQUEST_T *r
         async_context_wait_for_work_ms(context, 1000);
     }
     return req->result;
+}
 }

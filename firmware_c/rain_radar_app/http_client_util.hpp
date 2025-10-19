@@ -9,6 +9,12 @@
 
 #include "lwip/apps/http_client.h"
 
+struct async_context;
+
+
+namespace http_client_util
+{
+
 /*! \brief Parameters used to make HTTP request
  *  \ingroup pico_lwip
  */
@@ -70,7 +76,6 @@ typedef struct EXAMPLE_HTTP_REQUEST {
 
 } EXAMPLE_HTTP_REQUEST_T;
 
-struct async_context;
 
 /*! \brief Perform a http request asynchronously
  *  \ingroup pico_lwip
@@ -122,5 +127,7 @@ err_t http_client_header_print_fn(httpc_state_t *connection, void *arg, struct p
  * @return if != zero is returned, the connection is aborted
  */
 err_t http_client_receive_print_fn(void *arg, struct altcp_pcb *conn, struct pbuf *p, err_t err);
+
+}
 
 #endif

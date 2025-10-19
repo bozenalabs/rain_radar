@@ -13,11 +13,12 @@
 #include "hardware/spi.h"
 #include "hardware/uart.h"
 #include "inky_frame_7.hpp"
-#include "network_utils.hpp"
+#include "wifi_setup.hpp"
 #include "pico/stdlib.h"
 #include "pimoroni_common.hpp"
 #include "secrets.h"
 #include "data_fetching.hpp"
+#include "rain_radar_common.hpp"
 
 using namespace pimoroni;
 
@@ -47,7 +48,7 @@ int main()
   InkyFrame inky_frame;
   inky_frame.init();
 
-  if (!wifi_connect(inky_frame))
+  if (wifi_setup::wifi_connect(inky_frame) != Result::OK)
   {
     printf("Failed to connect to WiFi\n");
     draw_error(inky_frame, "Failed to connect to WiFi");
@@ -55,7 +56,7 @@ int main()
     return -1;
   }
 
-  if (!test_fetch())
+  if (test_fetch() != Result::OK)
   {
     printf("Test fetch failed\n");
     draw_error(inky_frame, "Test fetch failed");
@@ -69,6 +70,6 @@ int main()
 
   printf("Done\n");
 
-  network_deinit();
+  wifi_setup::network_deinit();
   return 0;
 }

@@ -16,9 +16,9 @@ pico_sdk_init()
 
 # Add your source files
 add_executable(${NAME}
-    main.cpp # <-- Add source files here!
-    network_utils.cpp
-    my_example_http_client_util.cpp
+    main.cpp
+    wifi_setup.cpp
+    http_client_util.cpp
     data_fetching.cpp
 )
 
