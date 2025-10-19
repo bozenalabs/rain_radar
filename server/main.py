@@ -325,9 +325,9 @@ if __name__ == "__main__":
     if args.deploy:
         for i in range(10):
             if i == 10:
-                deploy_dir = Path(f"publicly_available/{i}")
-            else:
                 deploy_dir = Path(f"publicly_available")
+            else:
+                deploy_dir = Path(f"publicly_available/{i}")
             deploy_dir.mkdir(exist_ok=True)
             shutil.copy(COMBINED_FILE, deploy_dir / COMBINED_FILE.name)
             shutil.copy(QUANTIZED_FILE, deploy_dir / QUANTIZED_FILE.name)
