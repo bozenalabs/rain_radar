@@ -165,16 +165,17 @@ def convert_to_bitmap(img):
     #         buf[pixel + i * offset] &= ~(1 << bit_offset)
     #         buf[pixel + i * offset] |= (b << bit_offset)
     
-    # The frame buffer on the pico is logically 3 single bit planes one after anther.
+    # for other picos, the frame buffer on the pico is logically 3 single bit planes one after anther.
     # plane_0[x,y] = bit 0 of color
     # plane_1[x,y] = bit 1 of color
     # plane_2[x,y] = bit 2 of color
+    # BUT for the 7.3, the buffer is stored on psram and for some reason
+    # it is just an array of bytes, one byte per pixel, each byte is the color index.
     
-    # import ipdb; ipdb.set_trace()
     framebuffer = bytearray(DESIRED_WIDTH * DESIRED_HEIGHT)
     counter = 0
-    for x in range(DESIRED_WIDTH):
-        for y in range(DESIRED_HEIGHT):
+    for y in range(DESIRED_HEIGHT):
+        for x in range(DESIRED_WIDTH):
             c = quantized_img.getpixel((x,y))
             # put_pixel(framebuffer, x, y, c)
             framebuffer[counter] = c

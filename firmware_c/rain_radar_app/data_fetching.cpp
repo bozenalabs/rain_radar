@@ -25,6 +25,8 @@
 #include "rain_radar_common.hpp"
 #include "wifi_setup.hpp"
 #include "psram_display.hpp"
+#include "inky_frame_7.hpp"
+
 
 #define HOST "muse-hub.taile8f45.ts.net"
 
@@ -70,22 +72,22 @@ err_t image_info_callback_fn(void *_image_info, __unused struct altcp_pcb *conn,
     }
 
     // copy pbuf to a buffer // TODO
-    size_t body_len = p->tot_len;
+    size_t body_len = p->len;
 
-    if (body_len >= 1024) {
-        printf("Image info too large: %u bytes\n", body_len);
-        return ERR_BUF;
-    }
+    // if (body_len >= 1024) {
+    //     printf("Image info too large: %u bytes\n", body_len);
+    //     return ERR_BUF;
+    // }
 
-    char* body = (char*)malloc(body_len + 1);
-    if (!body) {
-        printf("Failed to allocate memory for image info\n");
-        return ERR_MEM;
-    }
-    pbuf_copy_partial(p, body, body_len, 0);
+    // char* body = (char*)malloc(body_len + 1);
+    // if (!body) {
+    //     printf("Failed to allocate memory for image info\n");
+    //     return ERR_MEM;
+    // }
+    // pbuf_copy_partial(p, body, body_len, 0);
 
     ImageInfo* info = (ImageInfo*)_image_info;
-    parseBody(body, body_len, *info);
+    parseBody((char *)p->payload, body_len, *info);
 
     return ERR_OK;
 }
@@ -117,9 +119,11 @@ ResultOr<ImageInfo> fetch_image_info() {
 
 struct ImageWriterHelper{
     pimoroni::PSRamDisplay &psram_display;
+    size_t const max_address_write;
     size_t offset = 0;
 
-    ImageWriterHelper(pimoroni::PSRamDisplay &display) : psram_display(display) {
+    ImageWriterHelper(pimoroni::InkyFrame & inky_frame) 
+        : psram_display(inky_frame.ramDisplay) , max_address_write(inky_frame.width * inky_frame.height){
         offset = psram_display.pointToAddress({0,0});
     }
 };
@@ -133,20 +137,20 @@ err_t image_data_callback_fn(void *_arg, __unused struct altcp_pcb *conn, struct
 
     ImageWriterHelper *image_writer = (ImageWriterHelper *)_arg;
 
-    size_t body_len = p->tot_len;
-    printf("Received image data chunk of %u bytes\n", body_len);
-
-    // u16_t offset = 0;
-    // while (offset < body_len) {
-    //     u8_t b = pbuf_get_at(p, offset);
-    //     psram_display->write_pixel({offset - 1, 0}, b);
-    //     offset++;
-    // }
+    // TODO: handle pbuf chains
+    size_t body_len = p->len;
+    // printf("Received image data chunk of %u bytes\n", body_len);
 
     // Ive had to modify PSRamDisplay to make the write function and pointToAddress public
+
     size_t offset = image_writer->offset;
+    size_t new_offset = offset + body_len;
+    if (new_offset > image_writer->max_address_write) {
+        printf("Image data exceeds display size\n");
+        return ERR_BUF;
+    }
     image_writer->psram_display.write(offset, body_len, (const uint8_t *)p->payload);
-    image_writer->offset += body_len;
+    image_writer->offset = new_offset;
 
     // https://forums.raspberrypi.com/viewtopic.php?t=385648
     altcp_recved(conn, body_len);
@@ -158,7 +162,7 @@ err_t image_data_callback_fn(void *_arg, __unused struct altcp_pcb *conn, struct
 
 
 
-Err fetch_image(pimoroni::PSRamDisplay &psram_display) {
+Err fetch_image(pimoroni::InkyFrame &inky_frame) {
 
     if(!wifi_setup::is_connected()) {
         printf("Not connected to WiFi!\n");
@@ -169,7 +173,7 @@ Err fetch_image(pimoroni::PSRamDisplay &psram_display) {
     req.hostname = HOST;
     req.url = "/quantized.bin";
 
-    ImageWriterHelper image_writer(psram_display);
+    ImageWriterHelper image_writer(inky_frame);
 
     req.callback_arg = &image_writer;
 
