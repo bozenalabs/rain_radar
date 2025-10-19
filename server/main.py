@@ -267,7 +267,6 @@ def build_image():
     # turn the old precip data into the lightest intensity
     # and draw the forecast over it
     # precip_now_img = precip_now_img.
-    # ipdb.set_trace()
     precip_now_img = np.array(precip_now_img)
     precip_now_img[precip_now_img[:,:,3] != 0] = intensity_to_color(INTENSITY_MIN)
     precip_now_img = Image.fromarray(precip_now_img)
@@ -280,8 +279,8 @@ def build_image():
 
     precip_combined_img = precip_combined_img.resize(map_img.size, resample=Image.BILINEAR)
 
-    combined = Image.alpha_composite(map_img, precip_combined_img)
-
+    combined = map_img
+    # combined = Image.alpha_composite(map_img, precip_combined_img)
 
     combined = combined.convert("RGB")
     current_width, current_height = combined.size
