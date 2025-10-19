@@ -257,6 +257,9 @@ def convert_to_bitmap(img):
         combined.paste(qr_img, (1, 52)) # near the top left corner
 
     if add_text := True:
+
+
+        TEXT_HEIGHT = 14
         with open(IMAGE_INFO_FILE, "r") as f:
             lines = f.readlines()
             image_text = lines[1].strip().split("=")[1]
@@ -266,15 +269,16 @@ def convert_to_bitmap(img):
         draw = ImageDraw.Draw(quantized_img)
         
         # https://www.dafont.com/minecraftia.font
-        font = ImageFont.truetype("Minecraftia-Regular.ttf", 18)
+        font = ImageFont.truetype("Minecraftia-Regular.ttf", TEXT_HEIGHT)
 
         padding = 8
         x = padding
-        y = quantized_img.size[1] - 18 - padding
+        y = quantized_img.size[1] - TEXT_HEIGHT - padding
 
         print(f"Adding text to image: {image_text}")
 
-        # text (white)
+
+        draw.text((x, y), image_text, font=font, fill=(0, 0, 0), stroke_width=2, stroke_fill=(0,0,0))
         draw.text((x, y), image_text, font=font, fill=(255, 255, 255))
 
     # draw color swatches across the top edge using palette indices
