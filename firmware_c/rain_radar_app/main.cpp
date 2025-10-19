@@ -38,7 +38,7 @@ void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
     // graphics.set_pen(Inky73::BLACK);
     // graphics.rectangle(Rect(0, graphics.height - 25, graphics.width, 25));
     graphics.set_pen(Inky73::WHITE);
-    graphics.text(msg, Point(5, graphics.height - 22), graphics.width / 2, 2);
+    graphics.text(msg, Point(5, graphics.height - 17), graphics.width / 2, 2);
 }
 
 constexpr int HOLD_VSYS_EN = 2;
