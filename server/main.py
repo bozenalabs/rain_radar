@@ -55,30 +55,33 @@ TILE_Y = 42
 
 
 def download_precip_image(zoom, tile_x, tile_y, ts):
-    print("Downloading forecast image...")
-
-    response = get_tile_handler(ts, zoom, tile_x, tile_y)
-    assert response.status_code == 200
-
     file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}.png"
-    with open(file_path, "wb") as f:
-        f.write(response.content)
+    if not file_path.exists():
+        print("Downloading forecast image...")
+
+        response = get_tile_handler(ts, zoom, tile_x, tile_y)
+        assert response.status_code == 200
+
+        with open(file_path, "wb") as f:
+            f.write(response.content)
 
     return file_path
 
 
 def download_map_image(zoom, tile_x, tile_y):
-    url = f"https://api.maptiler.com/maps/0199e42b-f3ba-728f-81a6-ba4d151cc8fb/{zoom}/{tile_x}/{tile_y}.png?key={api_secrets.MAPTILER_API_KEY}"
-    headers = {"User-Agent": "TileFetcher/1.0 (your.email@example.com)"}
-    r = requests.get(url, headers=headers, timeout=10)
-
-    if r.status_code != 200:
-        raise RuntimeError(f"Failed to fetch tile: {r.status_code}")
-    
     file_path = IMAGES_DIR / f"map_{zoom}_{tile_x}_{tile_y}.png"
 
-    with open(file_path, "wb") as f:
-        f.write(r.content)
+    if not file_path.exists():
+        url = f"https://api.maptiler.com/maps/0199e42b-f3ba-728f-81a6-ba4d151cc8fb/{zoom}/{tile_x}/{tile_y}.png?key={api_secrets.MAPTILER_API_KEY}"
+        headers = {"User-Agent": "TileFetcher/1.0 (your.email@example.com)"}
+        r = requests.get(url, headers=headers, timeout=10)
+
+        if r.status_code != 200:
+            raise RuntimeError(f"Failed to fetch tile: {r.status_code}")
+        
+
+        with open(file_path, "wb") as f:
+            f.write(r.content)
     return file_path
 
 
@@ -158,45 +161,70 @@ def build_image():
 
     qr_code_image()
 
-    with Image.open(MAP_TILE_FILE).convert("RGBA") as map_img, Image.open(
-        PRECIP_TILE_FILE
-    ).convert("RGBA") as precip_img, Image.open(QRCODE_FILE).convert("RGBA") as qr_img:
-        if map_img.size != precip_img.size:
-            precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
-        combined = Image.alpha_composite(map_img, precip_img)
-        combined.paste(qr_img, (1, 52))
-        rgb_image = combined.convert("RGB")
-        current_width, current_height = rgb_image.size
-        if current_width / current_height > DESIRED_WIDTH / DESIRED_HEIGHT:
-            # too wide
-            cropped_width = current_height * DESIRED_WIDTH / DESIRED_HEIGHT
-            assert cropped_width <= current_width
-            cropped_width_start = (current_width - cropped_width) / 2
-            bounding_box = (
-                cropped_width_start,
-                0,
-                cropped_width + cropped_width_start,
-                current_height,
-            )
-        else:
-            # too tall
-            cropped_height = current_width * DESIRED_HEIGHT / DESIRED_WIDTH
-            assert cropped_height <= cropped_height
-            cropped_height_start = (current_height - cropped_height) / 2
-            bounding_box = (
-                0,
-                cropped_height_start,
-                current_width,
-                cropped_height + cropped_height_start,
-            )
+    map_img = Image.open(MAP_TILE_FILE).convert("RGBA")
+    precip_img = Image.open(PRECIP_TILE_FILE).convert("RGBA")
+    qr_img = Image.open(QRCODE_FILE).convert("RGBA")
 
-        rgb_image = rgb_image.resize(
-            (DESIRED_WIDTH, DESIRED_HEIGHT), box=bounding_box, resample=Image.BILINEAR
+    assert map_img.size[0] / map_img.size[1] == precip_img.size[0] / precip_img.size[1]
+
+    precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
+
+    combined = Image.alpha_composite(map_img, precip_img)
+
+    
+    # combined.paste(qr_img, (1, 52)) # near the top left corner
+
+    combined = combined.convert("RGB")
+    current_width, current_height = combined.size
+    if current_width / current_height > DESIRED_WIDTH / DESIRED_HEIGHT:
+        # too wide
+        cropped_width = current_height * DESIRED_WIDTH / DESIRED_HEIGHT
+        assert cropped_width <= current_width
+        cropped_width_start = (current_width - cropped_width) / 2
+        bounding_box = (
+            cropped_width_start,
+            0,
+            cropped_width + cropped_width_start,
+            current_height,
         )
-        convert_to_bitmap(rgb_image)
-        rgb_image = ImageEnhance.Color(rgb_image).enhance(1.3)
-        rgb_image.save(COMBINED_FILE, progressive=False, quality=85)
-        print("Combined map.png and forecast.png into one image.")
+    else:
+        # too tall
+        cropped_height = current_width * DESIRED_HEIGHT / DESIRED_WIDTH
+        assert cropped_height <= current_height
+        # cropped_height_start = (current_height - cropped_height) / 2
+        cropped_height_start = 0
+        bounding_box = (
+            0,
+            cropped_height_start,
+            current_width,
+            cropped_height + cropped_height_start,
+        )
+
+    combined = combined.crop(bounding_box)
+
+    
+    # zoom into the center quarter of the image
+    width, height = combined.size
+    scale = 0.7
+    centre_point = (width*0.38, height*0.35)
+    new_width = int(width * scale)
+    new_height = int(height * scale)
+    left = centre_point[0] - new_width // 2
+    upper = centre_point[1] - new_height // 2
+    right = centre_point[0] + new_width // 2
+    lower = centre_point[1] + new_height // 2
+    combined = combined.crop((left, upper, right, lower))
+
+    combined = combined.resize(
+        (DESIRED_WIDTH, DESIRED_HEIGHT), resample=Image.BILINEAR
+    )
+
+
+
+    convert_to_bitmap(combined)
+    combined = ImageEnhance.Color(combined).enhance(1.3)
+    combined.save(COMBINED_FILE, progressive=False, quality=85)
+    print("Combined map.png and forecast.png into one image.")
 
 
 PALETTE = (
