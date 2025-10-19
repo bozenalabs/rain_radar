@@ -59,6 +59,15 @@ void inky_sleep(InkyFrame &frame, int wake_in_minutes) {
     while(true) {}
 }
 
+void persistent_data_test()
+{
+    PersistentData data = read_persistent_data();
+    printf("Read persistent data: mode=%d\n", data.mode);
+    data.mode = (data.mode + 1) % 5;
+    write_persistent_data(&data);
+    printf("Wrote persistent data: mode=%d\n", data.mode);
+}
+
 int main()
 {
 
@@ -71,12 +80,7 @@ int main()
     InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
     printf("Wakup event: %d\n", event);
 
-    PersistentData persistent_data = read_persistent_data();
-    printf("Persistent data: mode=%d\n", persistent_data.mode);
-    persistent_data.mode = (persistent_data.mode + 1) % 5;
-    printf("New persistent data: mode=%d\n", persistent_data.mode);
-    write_persistent_data(&persistent_data);
-
+    // persistent_data_test();
 
     auto on_error = [&](const std::string_view &msg)
     {
