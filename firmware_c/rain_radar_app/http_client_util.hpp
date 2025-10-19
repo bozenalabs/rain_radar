@@ -74,7 +74,7 @@ typedef struct EXAMPLE_HTTP_REQUEST {
      */
     httpc_result_t result;
 
-} EXAMPLE_HTTP_REQUEST_T;
+} http_req_t;
 
 
 /*! \brief Perform a http request asynchronously
@@ -89,7 +89,7 @@ typedef struct EXAMPLE_HTTP_REQUEST {
  *
  * @see async_context
  */
-int http_client_request_async(struct async_context *context, EXAMPLE_HTTP_REQUEST_T *req);
+int http_client_request_async(struct async_context *context, http_req_t *req);
 
 /*! \brief Perform a http request synchronously
  *  \ingroup pico_lwip
@@ -100,7 +100,7 @@ int http_client_request_async(struct async_context *context, EXAMPLE_HTTP_REQUES
  * @param req HTTP request parameters. As a minimum this should be initialised to zero with hostname and url set to valid values
  * @param result Returns the overall result of the http request when complete. Zero indicates success.
  */
-int http_client_request_sync(struct async_context *context, EXAMPLE_HTTP_REQUEST_T *req);
+int http_client_request_sync(struct async_context *context, http_req_t *req);
 
 /*! \brief A http header callback that can be passed to \em http_client_init or \em http_client_init_secure
  *  \ingroup pico_http_client

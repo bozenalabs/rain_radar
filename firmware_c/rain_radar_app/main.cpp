@@ -35,9 +35,9 @@ void draw_error(InkyFrame &graphics, const std::string_view &msg)
 void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
 {
   graphics.set_pen(Inky73::BLACK);
-  graphics.rectangle(Rect(0, graphics.height - 25, graphics.width / 2, 25));
+  graphics.rectangle(Rect(0, graphics.height - 25, graphics.width , 25));
   graphics.set_pen(Inky73::WHITE);
-  graphics.text(msg, Point(5, graphics.height - 22), graphics.width / 2, 2);
+  graphics.text(msg, Point(5, graphics.height - 22), graphics.width /2, 2);
 }
 
 int main()
@@ -48,7 +48,7 @@ int main()
   InkyFrame inky_frame;
   inky_frame.init();
 
-  if (wifi_setup::wifi_connect(inky_frame) != Result::OK)
+  if (wifi_setup::wifi_connect(inky_frame) != Err::OK)
   {
     printf("Failed to connect to WiFi\n");
     draw_error(inky_frame, "Failed to connect to WiFi");
@@ -56,17 +56,18 @@ int main()
     return -1;
   }
 
-  if (test_fetch() != Result::OK)
-  {
+  ResultOr<data_fetching::ImageInfo> info = data_fetching::fetch_image_info();
+  if (info.ok()) {
+
+    draw_lower_left_text(inky_frame, info.unwrap().image_text);
+    inky_frame.update(true);
+  } else  {
     printf("Test fetch failed\n");
     draw_error(inky_frame, "Test fetch failed");
     inky_frame.update(true);
     return -1;
   }
 
-  draw_error(inky_frame, "no error");
-  draw_lower_left_text(inky_frame, "Pico Rain Radar");
-  inky_frame.update(true);
 
   printf("Done\n");
 

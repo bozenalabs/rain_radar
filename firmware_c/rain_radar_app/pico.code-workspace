@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "build",
+			"path": "build"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"string_view": "cpp",
+			"cstdio": "cpp",
+			"iomanip": "cpp",
+			"dns.h": "c",
+			"example_http_client_util.h": "c",
+			"http_client.h": "c"
+		}
+	}
+}

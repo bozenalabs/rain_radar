@@ -1,3 +1,5 @@
+#include "data_fetching.hpp"
+
 
 #include <stdio.h>
 #include <string.h>
@@ -13,7 +15,6 @@
 #include <time.h>
 
 #include "pico/stdlib.h"
-#include "pico/cyw43_arch.h"
 #include "lwip/pbuf.h"
 #include "lwip/altcp_tcp.h"
 #include "lwip/altcp_tls.h"
@@ -26,27 +27,96 @@
 
 
 #define HOST "muse-hub.taile8f45.ts.net"
-#define URL_REQUEST "/image_info.txt"
 
-Result test_fetch() {
+namespace data_fetching {
 
-    if(!wifi_setup::is_connected()) {
-        printf("Not connected to WiFi!\n");
-        return Result::NO_CONNECTION;
+// Parse simple "key=value" body
+bool parseBody(const char* body, size_t body_len, ImageInfo& info) {
+    const char* line = body;
+    const char* end = body + body_len;
+
+    while (line < end) {
+        const char* nextLine = (const char*)memchr(line, '\n', end - line);
+        if (!nextLine) nextLine = end;
+
+        // find '='
+        const char* eq = (const char*)memchr(line, '=', nextLine - line);
+        if (eq) {
+            std::string_view key(line, eq - line);
+            std::string_view value(eq + 1, nextLine - eq - 1);
+
+            printf("Key: '%.*s' Value: '%.*s'\n", (int)key.size(), key.data(), (int)value.size(), value.data());
+
+            if (key == "precip_ts") {
+                info.update_ts = strtol(value.data(), nullptr, 10);
+            } else if (key == "text") {
+                const size_t textBufSize = sizeof(info.image_text);
+                size_t n = value.copy(info.image_text, textBufSize - 1);
+                info.image_text[n] = '\0';
+            }
+        }
+
+        line = nextLine + 1;
+    }
+
+    return true;
+}
+
+// Print body to stdout
+err_t image_info_callback_fn(void *_image_info, __unused struct altcp_pcb *conn, struct pbuf *p, err_t err) {
+
+    if (err != ERR_OK || p == NULL)
+    {
+        printf("Error in image_info_callback_fn: %d\n", err);
+        return err;
     }
 
 
-    http_client_util::EXAMPLE_HTTP_REQUEST_T req1 = {0};
-    req1.hostname = HOST;
-    req1.url = URL_REQUEST;
-    req1.headers_fn = http_client_util::http_client_header_print_fn;
-    req1.recv_fn = http_client_util::http_client_receive_print_fn;
+    // copy pbuf to a buffer
+    size_t body_len = p->tot_len;
+
+    if (body_len >= 1024) {
+        printf("Image info too large: %u bytes\n", body_len);
+        return ERR_BUF;
+    }
+
+    char* body = (char*)malloc(body_len + 1);
+    if (!body) {
+        printf("Failed to allocate memory for image info\n");
+        return ERR_MEM;
+    }
+    pbuf_copy_partial(p, body, body_len, 0);
+
+    ImageInfo* info = (ImageInfo*)_image_info;
+    parseBody(body, body_len, *info);
+
+    return ERR_OK;
+}
+
+ResultOr<ImageInfo> fetch_image_info() {
+
+    if(!wifi_setup::is_connected()) {
+        printf("Not connected to WiFi!\n");
+        return Err::NO_CONNECTION;
+    }
+
+    http_client_util::http_req_t req = {0};
+    req.hostname = HOST;
+    req.url = "/image_info.txt";
+
+    ImageInfo info;
+    req.callback_arg = &info;
+
+    req.headers_fn = http_client_util::http_client_header_print_fn;
+    req.recv_fn = image_info_callback_fn;
     /* No CA certificate checking */
     struct altcp_tls_config * tls_config = altcp_tls_create_config_client(NULL, 0);
     assert(tls_config);
-    req1.tls_config = tls_config; // setting tls_config enables https
-    int result = http_client_util::http_client_request_sync(cyw43_arch_async_context(), &req1);
+    req.tls_config = tls_config; // setting tls_config enables https
+    int result = http_client_util::http_client_request_sync(cyw43_arch_async_context(), &req);
     altcp_tls_free_config(tls_config);
 
-    return result ? Result::ERROR : Result::OK;
+    return result ? Err::ERROR : ResultOr(info);
+}
+
 }

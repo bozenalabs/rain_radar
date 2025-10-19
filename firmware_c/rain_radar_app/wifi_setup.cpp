@@ -56,7 +56,7 @@ namespace
 
 namespace wifi_setup
 {
-Result wifi_connect(InkyFrame &inky_frame)
+Err wifi_connect(InkyFrame &inky_frame)
 {
   NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
 
@@ -69,7 +69,7 @@ Result wifi_connect(InkyFrame &inky_frame)
   if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
   {
     printf("failed to initialise\n");
-    return Result::NOT_INITIALISED;
+    return Err::NOT_INITIALISED;
   }
   printf("initialised\n");
 
@@ -82,7 +82,7 @@ Result wifi_connect(InkyFrame &inky_frame)
   else
   {
     printf("failed to start connection\n");
-    return Result::ERROR;
+    return Err::ERROR;
   }
 
   uint32_t t_start = millis();
@@ -103,7 +103,7 @@ Result wifi_connect(InkyFrame &inky_frame)
       printf("Connected!\n");
       led_controller.stop_pulse_network_led();
       inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
-      return Result::OK;
+      return Err::OK;
       break;
     case CYW43_LINK_FAIL:
       printf("Wifi status: LINK_FAIL (connection failed)\n");
@@ -126,7 +126,7 @@ Result wifi_connect(InkyFrame &inky_frame)
   }
   led_controller.stop_pulse_network_led();
   inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
-  return Result::TIMEOUT;
+  return Err::TIMEOUT;
 }
 
 bool is_connected()

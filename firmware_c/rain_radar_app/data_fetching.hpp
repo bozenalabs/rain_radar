@@ -1,5 +1,15 @@
 #pragma once
 
 #include "rain_radar_common.hpp"
+#include <string>
 
-Result test_fetch();
+namespace data_fetching {
+
+struct ImageInfo {
+    int64_t update_ts;
+    char image_text[64];
+};
+
+ResultOr<ImageInfo> fetch_image_info();
+
+}
