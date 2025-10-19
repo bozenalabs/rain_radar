@@ -85,8 +85,6 @@ def clear_button_leds():
 
 def network_connect(SSID, PSK):
     print("Connecting to network...")
-    print("SSID:", SSID)
-    print("PSK:", PSK)
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
 
@@ -116,40 +114,3 @@ def network_connect(SSID, PSK):
 state = {"run": None}
 app = None
 
-
-def file_exists(filename):
-    try:
-        return (os.stat(filename)[0] & 0x4000) == 0
-    except OSError:
-        return False
-
-
-def clear_state():
-    if file_exists("state.json"):
-        os.remove("state.json")
-
-
-def save_state(data):
-    with open("/state.json", "w") as f:
-        f.write(json.dumps(data))
-        f.flush()
-
-
-def load_state():
-    global state
-    data = json.loads(open("/state.json", "r").read())
-    if type(data) is dict:
-        state = data
-
-
-def update_state(running):
-    global state
-    state['run'] = running
-    save_state(state)
-
-
-def launch_app(app_name):
-    global app
-    app = __import__(app_name)
-    print(app)
-    update_state(app_name)

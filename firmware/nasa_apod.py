@@ -21,6 +21,15 @@ UPDATE_INTERVAL = 240
 # Variable for storing the NASA APOD Title
 apod_title = None
 
+BLACK = 0
+WHITE = 1
+GREEN = 2
+BLUE = 3
+RED = 4
+YELLOW = 5
+ORANGE = 6
+TAUPE = 7
+
 
 def show_error(text):
     graphics.set_pen(4)
@@ -77,23 +86,26 @@ def draw():
     jpeg = jpegdec.JPEG(graphics)
     gc.collect()  # For good measure...
 
-    graphics.set_pen(1)
+    graphics.set_pen(WHITE)
     graphics.clear()
 
     try:
         jpeg.open_file(FILENAME)
         jpeg.decode()
     except OSError:
-        graphics.set_pen(4)
+        graphics.set_pen(RED)
         graphics.rectangle(0, (HEIGHT // 2) - 20, WIDTH, 40)
-        graphics.set_pen(1)
+        graphics.set_pen(WHITE)
         graphics.text("Unable to display image!", 5, (HEIGHT // 2) - 15, WIDTH, 2)
         graphics.text("Check your network settings in secrets.py", 5, (HEIGHT // 2) + 2, WIDTH, 2)
 
-    graphics.set_pen(0)
+    graphics.set_pen(BLACK)
     graphics.rectangle(0, HEIGHT - 25, WIDTH, 25)
-    graphics.set_pen(1)
-    graphics.text("testing", 5, HEIGHT - 20, WIDTH, 2)
+    graphics.set_pen(WHITE)
+    graphics.text("testing2", 5, HEIGHT - 20, WIDTH, 2)
+
+    graphics.set_pen(TAUPE)
+    graphics.clear()
 
     gc.collect()
 
