@@ -136,16 +136,54 @@ def tile_xyz_to_geodataframe(x: int, y: int, z: int) -> gpd.GeoDataFrame:
     return gdf
 
 
+def test():
+    import osmnx as ox
+    import matplotlib.pyplot as plt
+
+    # --- CONFIG ---
+    place_name = "London, UK"  # Change this to your desired location
+
+    # --- FETCH WATER ---
+    print("Downloading water features...")
+    water = ox.features_from_place(
+        place_name,
+        tags={"natural": ["water", "bay", "coastline", "strait", "riverbank"], "water": True},
+    )
+
+    # --- FETCH MAJOR ROADS ---
+    print("Downloading major roads...")
+    custom_filter = (
+        '["highway"~"motorway|trunk|primary"]'
+    )
+    roads = ox.graph_from_place(place_name, custom_filter=custom_filter, simplify=True)
+    roads_gdf = ox.graph_to_gdfs(roads, nodes=False, edges=True)
+
+    # --- PLOT ---
+    fig, ax = plt.subplots(figsize=(10, 10))
+    water.plot(ax=ax, color="#a0c8f0", edgecolor="none")
+    roads_gdf.plot(ax=ax, color="black", linewidth=1)
+
+    ax.set_title(f"{place_name} — Water + Major Roads", fontsize=14)
+    ax.set_axis_off()
+
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("test.png", dpi=300, bbox_inches="tight")
+
+
 def build_image():
+    # test()
     geo_df = tile_xyz_to_geodataframe(TILE_X, TILE_Y, ZOOM)
     print(geo_df)
 
     # print(prettymaps.preset("default"))
 
+    # ipdb.set_trace()
     prettymaps.plot(
         "London, UK",
-        radius=1000,
-        preset="default",
+        radius=20000,
+        preset=None,
+        use_preset=False,
         circle=None,
         layers={
             "perimeter": {},
@@ -162,43 +200,38 @@ def build_image():
                     # "unclassified": 2,
                     # "pedestrian": 2,
                     # "footway": 1,
-                }
+                },
+                "custom_filter":'["highway"~"motorway|trunk|primary|secondary"]',
             },
             "waterway": {
                 "tags": {"waterway": ["river", "stream"]},
                 "width": {"river": 20, "stream": 10},
             },
-            "building": False,
+            # "building": False,
             "water": {"tags": {"natural": ["water", "bay"]}},
-            "sea": {},
-            "forest": {"tags": {"landuse": "forest"}},
-            "green": {
-                "tags": {
-                    "landuse": ["grass", "orchard"],
-                    "natural": ["island", "wood", "wetland"],
-                    "leisure": "park",
-                }
-            },
-            "rock": False,
-            "beach": {"tags": {"natural": "beach"}},
-            "parking": False,
+            # "sea": False,
+            # "forest": False,
+            # "green": False,
+            # "rock": False,
+            # "beach": False,
+            # "parking": False,
         },
         style={
             "perimeter": {"fill": False, "lw": 0, "zorder": 0},
             "background": {"fc": "#000000", "zorder": -1, "pad": 1},
             "green": {
                 "fc": "#3D3D3D",
-                "ec": "#2F3737",
-                "lw": 1,
+                "ec": "#353535",
+                "lw": 0,
                 "zorder": 1,
             },
-            "forest": {"fc": "#5D5D5D", "ec": "#575757", "lw": 1, "zorder": 2},
+            "forest": {"fc": "#5D5D5D", "ec": "#575757", "lw": 0, "zorder": 2},
             "water": {
-                "fc": "#ffffff",
-                "ec": "#2F3737",
-                "hatch_c": "#000000",
-                "hatch": "ooo...",
-                "lw": 1,
+                "fc": "#acacac",
+                # "ec": "#2F3737",
+                # "hatch_c": "#000000",
+                # "hatch": "ooo...",
+                "lw": 0,
                 "zorder": 99,
             },
             "sea": {
@@ -214,8 +247,8 @@ def build_image():
                 # "ec": "#2F3737",
                 # "hatch_c": "#000000",
                 # "hatch": "ooo...",
-                "lw": 1,
-                "zorder": 200,
+                "lw": 0,
+                "zorder": 99,
             },
             "beach": {
                 "fc": "#000000",
