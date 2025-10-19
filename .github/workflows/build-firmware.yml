@@ -26,6 +26,7 @@ jobs:
         cd firmware_c
         docker compose run --rm rain_radar_app bash -c "
           cd /root/pico/rain_radar_app &&
+          mv secrets_template.h secrets.h &&
           mkdir -p build &&
           cd build &&
           cmake .. &&

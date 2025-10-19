@@ -179,6 +179,8 @@ namespace data_fetching
         req.hostname = HOST;
         std::string url_str = "/" + std::to_string(connected_ssid_index) + "/quantized.bin";
         req.url = url_str.c_str();
+        printf("Requesting URL: %s from %s\n", req.url, req.hostname);
+
 
         ImageWriterHelper image_writer(inky_frame);
 
