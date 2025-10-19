@@ -3,3 +3,4 @@
 **/api_secrets.py
 **/__pycache__/
 server/publicly_available/
+**/secrets.h

@@ -25,9 +25,10 @@ include(common/pimoroni_i2c)
 include(common/pimoroni_bus)
 include(libraries/bitmap_fonts/bitmap_fonts)
 include(libraries/hershey_fonts/hershey_fonts)
+include(libraries/inky_frame/inky_frame)
+include(libraries/pico_wireless/pico_wireless)
 include(drivers/psram_display/psram_display)
 include(drivers/inky73/inky73)
-include(libraries/inky_frame/inky_frame)
 include(drivers/fatfs/fatfs)
 include(drivers/sdcard/sdcard)
 
@@ -43,6 +44,7 @@ target_link_libraries(${NAME}
     fatfs
     sdcard
     pico_graphics
+    pico_wireless
 )
 
 pico_enable_stdio_usb(${NAME} 0)
