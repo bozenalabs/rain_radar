@@ -110,6 +110,15 @@ int main()
         return -1;
     }
 
+    // points of interest
+    for (const auto &poi : secrets::POINTS_OF_INTEREST_XY)
+    {
+        inky_frame.set_pen(Inky73::WHITE);
+        inky_frame.circle(Point(poi[0], poi[1]), 3);
+        inky_frame.set_pen(Inky73::RED);
+        inky_frame.circle(Point(poi[0], poi[1]), 2);
+    }
+
     inky_frame.update(true);
 
     wifi_setup::network_deinit(inky_frame);

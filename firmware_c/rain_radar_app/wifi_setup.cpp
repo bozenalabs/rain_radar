@@ -152,16 +152,16 @@ namespace wifi_setup
         printf("initialised\n");
 
         int8_t initial_ssid_index = 0;
-        if (preferred_ssid_index >= 0 && preferred_ssid_index < NUM_KNOWN_SSIDS)
+        if (preferred_ssid_index >= 0 && preferred_ssid_index < secrets::NUM_KNOWN_SSIDS)
         {
             initial_ssid_index = preferred_ssid_index;
             printf("Trying preferred SSID index %d first\n", preferred_ssid_index);
         }
 
-        for (int i = 0; i < NUM_KNOWN_SSIDS; i++)
+        for (int i = 0; i < secrets::NUM_KNOWN_SSIDS; i++)
         {
-            int8_t ssid_attempt_index = (initial_ssid_index + i) % NUM_KNOWN_SSIDS;
-            Err err = try_connect_to_ssid(KNOWN_SSIDS[ssid_attempt_index], KNOWN_WIFI_PASSWORDS[ssid_attempt_index]);
+            int8_t ssid_attempt_index = (initial_ssid_index + i) % secrets::NUM_KNOWN_SSIDS;
+            Err err = try_connect_to_ssid(secrets::KNOWN_SSIDS[ssid_attempt_index], secrets::KNOWN_WIFI_PASSWORDS[ssid_attempt_index]);
             if (err == Err::OK)
             {
                 led_controller.stop_pulse_network_led();

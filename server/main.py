@@ -253,7 +253,7 @@ def build_image():
 
     with open(IMAGE_INFO_FILE, "w") as f:
         image_text = dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime(
-                "%Y-%m-%d %H:%M:%S") + " + " + f"{FORECAST_SECS//60} mins forecast"
+                "%Y-%m-%d %H:%M:%S") + " + " + f"{FORECAST_SECS//60} min forecast"
         f.write(f"precip_ts={precip_ts}\n")
         f.write(f"text={image_text}\n")
 
@@ -344,7 +344,7 @@ def convert_to_bitmap(img):
 
     # draw a bar in the bottom right showing the colour intesity legend using intensity_to_color
     if add_legend := True:
-        legend_width = 400
+        legend_width = 415
         legend_start_x = DESIRED_WIDTH - legend_width - 3
         legend_height = 16
         legend_start_y = DESIRED_HEIGHT - legend_height - 3
@@ -354,6 +354,8 @@ def convert_to_bitmap(img):
             if color[3] != 0:
                 for y in range(int(legend_height)):
                     img.putpixel((int(legend_start_x + i), int(legend_start_y + y)), color)
+
+
 
     # Open the source image and quantize it to our palette
     quantized_img = img.convert("RGB").quantize(
@@ -385,6 +387,11 @@ def convert_to_bitmap(img):
 
         draw.text((x, y), image_text, font=font, fill=(0, 0, 0), stroke_width=3, stroke_fill=(0,0,0))
         draw.text((x, y), image_text, font=font, fill=(255, 255, 255))
+
+        # add point of interest
+        # w = 3
+        # x,y = 100,200
+        # draw.ellipse((x,y,x+w,y+w), fill=(255,0,0))
 
 
     # so we can see it
