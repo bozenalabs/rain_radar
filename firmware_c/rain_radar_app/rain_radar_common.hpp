@@ -51,7 +51,7 @@ constexpr std::string_view resultToString(Err r)
     }
 }
 
-template <typename T >
+template <typename T>
 struct ResultOr
 {
     static_assert(!std::is_same_v<T, Err>, "ResultOr<T> cannot have T = Result");
@@ -60,7 +60,7 @@ struct ResultOr
     T value;
 
     bool ok() const { return result == Err::OK; };
-    const T& unwrap() const
+    const T &unwrap() const
     {
         if (!ok())
         {
@@ -72,7 +72,8 @@ struct ResultOr
     ResultOr() = delete;
 
     // this one can be implicit
-    ResultOr(Err r) : result(r), value() {
+    ResultOr(Err r) : result(r), value()
+    {
         assert(r != Err::OK);
     }
     explicit ResultOr(T v) : result(Err::OK), value(v) {}

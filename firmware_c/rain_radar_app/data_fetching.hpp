@@ -4,14 +4,16 @@
 #include <string>
 #include "inky_frame_7.hpp"
 
-namespace data_fetching {
+namespace data_fetching
+{
 
-struct ImageInfo {
-    int64_t update_ts;
-    char image_text[64];
-};
+    struct ImageInfo
+    {
+        int64_t update_ts;
+        char image_text[64];
+    };
 
-ResultOr<ImageInfo> fetch_image_info();
-Err fetch_image(pimoroni::InkyFrame &inky_frame);
+    ResultOr<ImageInfo> fetch_image_info();
+    Err fetch_image(pimoroni::InkyFrame &inky_frame);
 
 }

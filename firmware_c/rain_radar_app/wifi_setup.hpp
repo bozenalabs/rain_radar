@@ -9,13 +9,11 @@
 #include "inky_frame_7.hpp"
 #include "rain_radar_common.hpp"
 
-
 namespace wifi_setup
 {
 
-Err wifi_connect(pimoroni::InkyFrame &inky_frame);
-void network_deinit();
-bool is_connected();
-
+    Err wifi_connect(pimoroni::InkyFrame &inky_frame);
+    void network_deinit();
+    bool is_connected();
 
 }
