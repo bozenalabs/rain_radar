@@ -5,16 +5,16 @@
 #include <stdio.h>
 #include "drivers/psram_display/psram_display.hpp"
 #include "drivers/inky73/inky73.hpp"
+#include "inky_frame_7.hpp"
 #include "pimoroni_common.hpp"
 #include "pico_wireless.hpp"
 
 #include "secrets.h"
-#include "network.h"
+#include "network_utils.hpp"
 
 using namespace pimoroni;
 
-uint LED_PIN = 8;
-uint LED_WARN_PIN = 6;
+
 uint DISPLAY_WIDTH = 800;
 uint DISPLAY_HEIGHT = 480;
 
@@ -22,14 +22,14 @@ uint DISPLAY_HEIGHT = 480;
 
 static const std::string URL = "https://muse-hub.taile8f45.ts.net/";
 
-void draw_error(PicoGraphics_PenInky7 &graphics, const std::string_view &msg) {
+void draw_error(InkyFrame &graphics, const std::string_view &msg) {
   graphics.set_pen(Inky73::RED);
   graphics.rectangle(Rect(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT -25, DISPLAY_WIDTH / 2, 25));
   graphics.set_pen(Inky73::WHITE);
   graphics.text(msg, Point(DISPLAY_WIDTH / 2 + 5, DISPLAY_HEIGHT -22), DISPLAY_WIDTH / 2, 2);
 }
 
-void draw_lower_left_text(PicoGraphics_PenInky7 &graphics, const std::string_view &msg) {
+void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg) {
   graphics.set_pen(Inky73::BLACK);
   graphics.rectangle(Rect(0, DISPLAY_HEIGHT -25, DISPLAY_WIDTH / 2, 25));
   graphics.set_pen(Inky73::WHITE);
@@ -38,32 +38,46 @@ void draw_lower_left_text(PicoGraphics_PenInky7 &graphics, const std::string_vie
 
 int main() {
   stdio_init_all();
+  sleep_ms(500);
 
-  gpio_init(LED_PIN);
-  gpio_set_function(LED_PIN, GPIO_FUNC_SIO);
-  gpio_set_dir(LED_PIN, GPIO_OUT);
 
-  PSRamDisplay ramDisplay(DISPLAY_WIDTH, DISPLAY_HEIGHT);
-  PicoGraphics_PenInky7 graphics(DISPLAY_WIDTH, DISPLAY_HEIGHT, ramDisplay);
-  Inky73 inky7(DISPLAY_WIDTH,DISPLAY_HEIGHT);
+  InkyFrame inky_frame;
+  inky_frame.init();
+
+  printf("Inky Frame init done\n");
+  fflush(stdout);
+  for (int i = 0; i < 3; i++) {
+    printf("Inky Frame init done\n");
+    fflush(stdout);
+    sleep_ms(1000);
+  }
+
   PicoWireless wireless;
 
-  network_led_init();
-  pulse_network_led(1); // 1Hz pulse
 
-  draw_error(graphics, "Initialising wireless...");
-  draw_lower_left_text(graphics, "Pico Rain Radar");
-  inky7.update(&graphics);
-  sleep_ms(40000);
+  if(! wifi_connect(wireless, inky_frame) ) {
+    printf("Failed to connect to WiFi\n");
+    fflush(stdout);
 
-
-
-  if(! wifi_connect(wireless) ) {
-    draw_error(graphics, "Failed to connect to WiFi");
-    inky7.update(&graphics);
-    sleep_ms(40000);
+    draw_error(inky_frame, "Failed to connect to WiFi");
+    inky_frame.update(true);
     return -1;
   }
+
+
+
+  draw_error(inky_frame, "test error");
+  draw_lower_left_text(inky_frame, "Pico Rain Radar");
+  inky_frame.update(true);
+
+  int i = 0;
+
+  while(true){
+   printf("Pico Rain Radar\n");
+    printf("Attempt %d to init display\n", i++);
+    sleep_ms(1000);
+  }
+
 
 
 
@@ -92,5 +106,6 @@ int main() {
   //   gpio_put(LED_PIN, 0);
   // }
 
+  printf("Done\n");
   return 0;
 }

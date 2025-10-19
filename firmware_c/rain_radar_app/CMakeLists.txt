@@ -17,6 +17,7 @@ pico_sdk_init()
 # Add your source files
 add_executable(${NAME}
     main.cpp # <-- Add source files here!
+    network_utils.cpp
 )
 
 # Include required libraries
@@ -25,19 +26,19 @@ include(common/pimoroni_i2c)
 include(common/pimoroni_bus)
 include(libraries/bitmap_fonts/bitmap_fonts)
 include(libraries/hershey_fonts/hershey_fonts)
-include(libraries/inky_frame/inky_frame)
+include(libraries/inky_frame_7/inky_frame_7)
 include(libraries/pico_wireless/pico_wireless)
-include(drivers/psram_display/psram_display)
-include(drivers/inky73/inky73)
+# include(drivers/psram_display/psram_display)
+# include(drivers/inky73/inky73)/
 include(drivers/fatfs/fatfs)
 include(drivers/sdcard/sdcard)
 
 # Don't forget to link the libraries you need!
 target_link_libraries(${NAME}
     pico_stdlib
-    psram_display
-    inky73
-    inky_frame
+    # psram_display
+    # inky73
+    inky_frame_7
     hardware_pwm
     hardware_spi
     hardware_i2c
@@ -47,7 +48,7 @@ target_link_libraries(${NAME}
     pico_wireless
 )
 
-pico_enable_stdio_usb(${NAME} 0)
+pico_enable_stdio_usb(${NAME} 1)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(${NAME})
