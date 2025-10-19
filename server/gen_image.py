@@ -10,6 +10,7 @@ import qrcode
 
 from api_secrets import RAINBOW_API_TOKEN
 import json
+import datetime as dt
 
 
 PRECIP_TILE_FILE = Path("forecast.png")
@@ -17,14 +18,16 @@ MAP_TILE_FILE = Path("map.png")
 QRCODE_FILE = Path("qrcode.png")
 COMBINED_FILE = Path("publicly_available/combined.jpg")
 
+FORECAST_SECS = 600  # 10 minutes
+
 
 def get_snapshot_timestamp():
     response = requests.get(f"https://api.rainbow.ai/tiles/v1/snapshot?token={RAINBOW_API_TOKEN}")
     return response.json()["snapshot"]
 
 
-def get_tile_handler(snapshot_timestamp: int, forecast_time: int, zoom: int, x: int, y: int):
-    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{forecast_time}/{zoom}/{x}/{y}?token={RAINBOW_API_TOKEN}&color=8"
+def get_tile_handler(snapshot_timestamp: int, zoom: int, x: int, y: int):
+    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/FORECAST_SECS/{zoom}/{x}/{y}?token={RAINBOW_API_TOKEN}&color=8"
     response = requests.get(url, stream=True, timeout=10)
     return response
 
@@ -36,7 +39,7 @@ def download_precip_image():
     print("Downloading forecast image...")
     ts = get_snapshot_timestamp()
     print(f"Snapshot timestamp: {ts}")
-    response = get_tile_handler(ts, 600,ZOOM,TILE_X,TILE_Y)
+    response = get_tile_handler(ts,ZOOM,TILE_X,TILE_Y)
     if response.status_code == 200:
         with open(PRECIP_TILE_FILE, "wb") as f:
             f.write(response.content)
@@ -77,7 +80,10 @@ def build_image():
     precip_ts = download_precip_image()
     info_path = COMBINED_FILE.parent / "image_info.json"
     with open(info_path, "w") as f:
-        json.dump({"precip_ts": precip_ts}, f)
+        json.dump({
+            "precip_ts": precip_ts,
+            "text": dt.datetime.fromtimestamp(precip_ts).strftime("%Y-%m-%d %H:%M:%S") + " + "+ f"{FORECAST_SECS//60} mins forecast",
+        }, f)
     qr_code_image()
 
     desired_width = 800

@@ -2,7 +2,7 @@ import gc
 import time
 from machine import reset
 import inky_helper as ih
-import nasa_apod as app
+import rain_radar as app
 
 # Uncomment the line for your Inky Frame display size
 # from picographics import PicoGraphics, DISPLAY_INKY_FRAME_4 as DISPLAY  # 4.0"

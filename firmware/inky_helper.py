@@ -73,6 +73,11 @@ def sleep(t):
     # Regular time.sleep for those powering from USB
     time.sleep(60 * t)
 
+def file_exists(filename):
+    try:
+        return (os.stat(filename)[0] & 0x4000) == 0
+    except OSError:
+        return False
 
 # Turns off the button LEDs
 def clear_button_leds():
@@ -85,8 +90,8 @@ def clear_button_leds():
 
 def network_connect(SSID, PSK):
     print("Connecting to network...")
-    print(f"SSID: {SSID}")
-    print(f"PSK: {PSK}")
+    # print(f"SSID: {SSID}")
+    # print(f"PSK: {PSK}")
     wlan = network.WLAN(network.STA_IF)
     time.sleep(0.1)
     wlan.active(True)
