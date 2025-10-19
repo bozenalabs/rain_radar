@@ -22,6 +22,8 @@ add_executable(${NAME}
 
 target_include_directories(${NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
+
+    ${PICO_LWIP_PATH}/src/apps/altcp_tls/
 )
 
 # Include required libraries
@@ -31,7 +33,6 @@ include(common/pimoroni_bus)
 include(libraries/bitmap_fonts/bitmap_fonts)
 include(libraries/hershey_fonts/hershey_fonts)
 include(libraries/inky_frame_7/inky_frame_7)
-include(libraries/pico_wireless/pico_wireless)
 include(drivers/fatfs/fatfs)
 include(drivers/sdcard/sdcard)
 
@@ -46,7 +47,8 @@ target_link_libraries(${NAME}
     fatfs
     sdcard
     pico_graphics
-    pico_wireless
+    pico_lwip_mbedtls
+    pico_mbedtls
 )
 
 pico_enable_stdio_usb(${NAME} 1)

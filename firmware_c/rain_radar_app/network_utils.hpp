@@ -5,7 +5,6 @@
 #include <hardware/clocks.h>
 #include <pico/time.h>
 #include <pico/stdlib.h>
-#include "pico_wireless.hpp"
 #include "pimoroni_common.hpp"
 #include "secrets.h"
 #include "inky_frame_7.hpp"

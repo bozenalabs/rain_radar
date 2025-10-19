@@ -14,10 +14,10 @@
 #include "hardware/uart.h"
 #include "inky_frame_7.hpp"
 #include "network_utils.hpp"
-#include "pico_wireless.hpp"
 #include "pico/stdlib.h"
 #include "pimoroni_common.hpp"
 #include "secrets.h"
+#include "data_fetching.hpp"
 
 using namespace pimoroni;
 
@@ -55,7 +55,15 @@ int main()
     return -1;
   }
 
-  draw_error(inky_frame, "test error");
+  if (!test_fetch())
+  {
+    printf("Test fetch failed\n");
+    draw_error(inky_frame, "Test fetch failed");
+    inky_frame.update(true);
+    return -1;
+  }
+
+  draw_error(inky_frame, "no error");
   draw_lower_left_text(inky_frame, "Pico Rain Radar");
   inky_frame.update(true);
 

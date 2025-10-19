@@ -7,7 +7,6 @@
 #include <hardware/clocks.h>
 #include <pico/time.h>
 #include <pico/stdlib.h>
-#include "pico_wireless.hpp"
 #include "pimoroni_common.hpp"
 #include "pico/cyw43_arch.h"
 
@@ -29,27 +28,19 @@ namespace
     static bool network_led_callback_static(repeating_timer_t *rt)
     {
       auto self = reinterpret_cast<NetworkLedController *>(rt->user_data);
-
-      printf("Network LED timer callback %d\n", self->pulse_speed_hz);
       // ms since boot
       double t_ms = (double)to_ms_since_boot(get_absolute_time());
       // angle = 2*pi * t_ms * freq / 1000
       double angle = 2.0 * M_PI * t_ms * (double)self->pulse_speed_hz / 1000.0;
       double brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
-      printf("LED brightness: %.1f\n", brightness);
-      fflush(stdout);
       self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
-
       return true; // keep repeating
     }
 
-    // Start pulsing the network LED at speed_hz
     void start_pulse_network_led()
     {
-
       add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
       // important that user_data is set after the timer is added
-
       network_led_timer.user_data = this;
     };
 

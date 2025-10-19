@@ -25,7 +25,9 @@ And selected the rain radar target.
 Then Cmake build command works.
 put the pico into bootloader and copy over `docker cp 2e933ce5c2cc:/home/appuser/pico/rain_radar_app/build/rain_radar.uf2 /media/hal/RPI-RP2`
 The `Serial Monitor` extension from microsoft works even in the container and I can see the printfs from the board.
-
+Getting the serial monitor to work reliable is a little tricky:
+Often after reprogramming, the serila monitor will hang `Waiting for reconnection`.
+Instead of changing the settings, a press of the reset button should work reestablish connection.
 
 the pico wireless example isnt an example of using the rasp pi pico w to connect to the internt.
 it is for this board which uses an esp32: https://shop.pimoroni.com/products/pico-wireless-pack

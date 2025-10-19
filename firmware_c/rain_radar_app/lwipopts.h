@@ -1,6 +1,5 @@
-#ifndef _LWIPOPTS_EXAMPLE_COMMONH_H
-#define _LWIPOPTS_EXAMPLE_COMMONH_H
-
+#ifndef _LWIPOPTS_H
+#define _LWIPOPTS_H
 
 // Common settings used in most of the pico_w examples
 // (see https://www.nongnu.org/lwip/2_1_x/group__lwip__opts.html for details)
@@ -89,4 +88,17 @@
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 
-#endif /* __LWIPOPTS_H__ */
+/* TCP WND must be at least 16 kb to match TLS record size
+   or you will get a warning "altcp_tls: TCP_WND is smaller than the RX decrypion buffer, connection RX might stall!" */
+#undef TCP_WND
+#define TCP_WND  16384
+
+#define LWIP_ALTCP               1
+#define LWIP_ALTCP_TLS           1
+#define LWIP_ALTCP_TLS_MBEDTLS   1
+
+#define LWIP_DEBUG 1
+#define ALTCP_MBEDTLS_DEBUG  LWIP_DBG_ON
+
+#endif
+
