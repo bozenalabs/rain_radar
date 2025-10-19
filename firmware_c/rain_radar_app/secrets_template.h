@@ -17,6 +17,7 @@ const char KNOWN_WIFI_PASSWORDS[NUM_KNOWN_SSIDS][64] = {
     "werqweqwe",
 };
 
+// draw a little marker for these pixels.
 const int POINTS_OF_INTEREST_XY[][2] = {
     {100, 150},
     {200, 250},
