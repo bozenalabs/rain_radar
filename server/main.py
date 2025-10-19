@@ -12,7 +12,7 @@ import ipdb
 import argparse
 import shutil
 from PIL import ImageDraw, ImageFont
-
+import io
 
 IMAGES_DIR = Path("images")
 IMAGES_DIR.mkdir(exist_ok=True)
@@ -33,7 +33,7 @@ def get_snapshot_timestamp():
 
 
 def get_tile_handler(zoom: int, x: int, y: int, snapshot_timestamp: int, forecast_secs: int):
-    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{forecast_secs}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
+    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{forecast_secs}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=dbz_u8"
     # print(url)
     response = requests.get(url, stream=True, timeout=10)
     return response
@@ -47,16 +47,48 @@ TILE_X = 63
 TILE_Y = 42
 
 
+
+def process_dbz_u8(img: Image) -> Image:
+    """Process dbz_u8 image: set pixel to pure white if red component & 128 == 128"""
+    # Convert to RGBA to ensure we can work with individual color channels
+    img = img.convert("RGBA")
+    
+    # Get pixel data as a list
+    pixels = list(img.getdata())
+
+    # import ipdb; ipdb.set_trace()
+    
+    # Process each pixel
+    processed_pixels = []
+    for r, g, b, a in pixels:
+        assert r == g == b, "Expected grayscale image where R=G=B"
+        if a == 0:
+            # not rain data
+            processed_pixels.append((0, 0, 0, 0))  # Keep fully transparent pixels as is
+            continue
+        if r & 128 == 128:  # Check if bit 7 (128) is set in red component
+            processed_pixels.append((255, 255, 255, a))  # Pure white, keep alpha
+        else:
+            processed_pixels.append((r, g, b, a))  # Keep original pixel
+    
+    # Create new image with processed pixels
+    processed_img = Image.new("RGBA", img.size)
+    processed_img.putdata(processed_pixels)
+    
+    return processed_img
+
 def download_precip_image(zoom, tile_x, tile_y, ts, forecast_secs):
-    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}_{ts}_{forecast_secs}.png"
-    if not file_path.exists():
+    file_path = IMAGES_DIR / f"precip_{zoom}_{tile_x}_{tile_y}_{ts}_{forecast_secs}_dbz_u8.png"
+    if not file_path.exists() or True:
         print("Downloading forecast image...")
 
         response = get_tile_handler(zoom, tile_x, tile_y, ts, forecast_secs)
         assert response.status_code == 200
 
-        with open(file_path, "wb") as f:
-            f.write(response.content)
+        img = Image.open(io.BytesIO(response.content))
+        if "dbz_u8" in file_path.name:
+            img = process_dbz_u8(img)
+        img.save(file_path)
 
     return file_path
 
@@ -283,15 +315,15 @@ def convert_to_bitmap(img):
 
     # draw color swatches across the top edge using palette indices
 
-    # num_colors = len(PALETTE) // 3
-    # for i in range(num_colors):
-    #     swatch_width = 70
-    #     swatch_height = 30
-    #     x0 = 100 + i * swatch_width
-    #     x1 = min(x0 + swatch_width, DESIRED_WIDTH)
-    #     for x in range(x0, x1):
-    #         for y in range(0, swatch_height):
-    #             quantized_img.putpixel((x, y), i)
+    num_colors = len(PALETTE) // 3
+    for i in range(num_colors):
+        swatch_width = 70
+        swatch_height = 30
+        x0 = 100 + i * swatch_width
+        x1 = min(x0 + swatch_width, DESIRED_WIDTH)
+        for x in range(x0, x1):
+            for y in range(0, swatch_height):
+                quantized_img.putpixel((x, y), i)
 
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.png"))
@@ -333,5 +365,4 @@ if __name__ == "__main__":
             shutil.copy(QUANTIZED_FILE, deploy_dir / QUANTIZED_FILE.name)
             shutil.copy(IMAGE_INFO_FILE, deploy_dir / IMAGE_INFO_FILE.name)
             print(f"Copied images to {deploy_dir}")
-
 
