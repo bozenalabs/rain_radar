@@ -2,6 +2,7 @@
 
 #include "rain_radar_common.hpp"
 #include <string>
+#include "psram_display.hpp"
 
 namespace data_fetching {
 
@@ -11,5 +12,6 @@ struct ImageInfo {
 };
 
 ResultOr<ImageInfo> fetch_image_info();
+Err fetch_image(pimoroni::PSRamDisplay &psram_display);
 
 }

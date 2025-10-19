@@ -77,7 +77,7 @@ Err wifi_connect(InkyFrame &inky_frame)
 
   if (!cyw43_arch_wifi_connect_async(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))
   {
-    printf("started conncectiopn attempt...\n");
+    printf("Started connection attempt...\n");
   }
   else
   {

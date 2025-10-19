@@ -155,26 +155,31 @@ def convert_to_bitmap(img):
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
 
-    def put_pixel(buf:bytearray, x:int, y:int, c):
-        offset      = (DESIRED_WIDTH * DESIRED_HEIGHT) // 8
-        pixel       = (x // 8) + (y * DESIRED_WIDTH // 8)
-        bit_offset  = 7 - (x & 0b111)
+    # def put_pixel(buf:bytearray, x:int, y:int, c):
+    #     offset      = (DESIRED_WIDTH * DESIRED_HEIGHT) // 8
+    #     pixel       = (x // 8) + (y * DESIRED_WIDTH // 8)
+    #     bit_offset  = 7 - (x & 0b111)
 
-        for i in range(3):
-            b = (c >> (2 - i)) & 1
-            buf[pixel + i * offset] &= ~(1 << bit_offset)
-            buf[pixel + i * offset] |= (b << bit_offset)
+    #     for i in range(3):
+    #         b = (c >> (2 - i)) & 1
+    #         buf[pixel + i * offset] &= ~(1 << bit_offset)
+    #         buf[pixel + i * offset] |= (b << bit_offset)
     
-    # 3 single bit planes.
+    # The frame buffer on the pico is logically 3 single bit planes one after anther.
     # plane_0[x,y] = bit 0 of color
     # plane_1[x,y] = bit 1 of color
     # plane_2[x,y] = bit 2 of color
     
-    framebuffer = bytearray(DESIRED_WIDTH * DESIRED_HEIGHT // 8 * 3)
+    # import ipdb; ipdb.set_trace()
+    framebuffer = bytearray(DESIRED_WIDTH * DESIRED_HEIGHT)
+    counter = 0
     for x in range(DESIRED_WIDTH):
         for y in range(DESIRED_HEIGHT):
             c = quantized_img.getpixel((x,y))
-            put_pixel(framebuffer, x, y, c)
+            # put_pixel(framebuffer, x, y, c)
+            framebuffer[counter] = c
+            counter += 1
+
     with open(QUANTIZED_FILE, "wb") as f:
         f.write(framebuffer)
     print("Wrote quantized framebuffer.")

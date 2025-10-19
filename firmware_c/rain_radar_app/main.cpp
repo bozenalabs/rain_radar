@@ -58,15 +58,25 @@ int main()
 
   ResultOr<data_fetching::ImageInfo> info = data_fetching::fetch_image_info();
   if (info.ok()) {
-
     draw_lower_left_text(inky_frame, info.unwrap().image_text);
-    inky_frame.update(true);
   } else  {
     printf("Test fetch failed\n");
     draw_error(inky_frame, "Test fetch failed");
     inky_frame.update(true);
     return -1;
   }
+
+  Err result = data_fetching::fetch_image(inky_frame.ramDisplay);
+  if (result == Err::OK) {
+    printf("Image fetch OK\n");
+  } else {
+    printf("Image fetch failed\n");
+    draw_error(inky_frame, "Image fetch failed");
+    inky_frame.update(true);
+    return -1;
+  }
+
+  inky_frame.update(true);
 
 
   printf("Done\n");

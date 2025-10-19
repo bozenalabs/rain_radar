@@ -24,7 +24,7 @@
 #include "http_client_util.hpp"
 #include "rain_radar_common.hpp"
 #include "wifi_setup.hpp"
-
+#include "psram_display.hpp"
 
 #define HOST "muse-hub.taile8f45.ts.net"
 
@@ -62,17 +62,14 @@ bool parseBody(const char* body, size_t body_len, ImageInfo& info) {
     return true;
 }
 
-// Print body to stdout
 err_t image_info_callback_fn(void *_image_info, __unused struct altcp_pcb *conn, struct pbuf *p, err_t err) {
-
     if (err != ERR_OK || p == NULL)
     {
         printf("Error in image_info_callback_fn: %d\n", err);
         return err;
     }
 
-
-    // copy pbuf to a buffer
+    // copy pbuf to a buffer // TODO
     size_t body_len = p->tot_len;
 
     if (body_len >= 1024) {
@@ -94,7 +91,6 @@ err_t image_info_callback_fn(void *_image_info, __unused struct altcp_pcb *conn,
 }
 
 ResultOr<ImageInfo> fetch_image_info() {
-
     if(!wifi_setup::is_connected()) {
         printf("Not connected to WiFi!\n");
         return Err::NO_CONNECTION;
@@ -117,6 +113,76 @@ ResultOr<ImageInfo> fetch_image_info() {
     altcp_tls_free_config(tls_config);
 
     return result ? Err::ERROR : ResultOr(info);
+}
+
+struct ImageWriterHelper{
+    pimoroni::PSRamDisplay &psram_display;
+    size_t offset = 0;
+
+    ImageWriterHelper(pimoroni::PSRamDisplay &display) : psram_display(display) {
+        offset = psram_display.pointToAddress({0,0});
+    }
+};
+
+err_t image_data_callback_fn(void *_arg, __unused struct altcp_pcb *conn, struct pbuf *p, err_t err) {
+    if (err != ERR_OK || p == NULL)
+    {
+        printf("Error in image_data_callback_fn: %d\n", err);
+        return err;
+    }
+
+    ImageWriterHelper *image_writer = (ImageWriterHelper *)_arg;
+
+    size_t body_len = p->tot_len;
+    printf("Received image data chunk of %u bytes\n", body_len);
+
+    // u16_t offset = 0;
+    // while (offset < body_len) {
+    //     u8_t b = pbuf_get_at(p, offset);
+    //     psram_display->write_pixel({offset - 1, 0}, b);
+    //     offset++;
+    // }
+
+    // Ive had to modify PSRamDisplay to make the write function and pointToAddress public
+    size_t offset = image_writer->offset;
+    image_writer->psram_display.write(offset, body_len, (const uint8_t *)p->payload);
+    image_writer->offset += body_len;
+
+    // https://forums.raspberrypi.com/viewtopic.php?t=385648
+    altcp_recved(conn, body_len);
+    pbuf_free(p);
+
+    return ERR_OK;
+}
+
+
+
+
+Err fetch_image(pimoroni::PSRamDisplay &psram_display) {
+
+    if(!wifi_setup::is_connected()) {
+        printf("Not connected to WiFi!\n");
+        return Err::NO_CONNECTION;
+    }
+
+    http_client_util::http_req_t req = {0};
+    req.hostname = HOST;
+    req.url = "/quantized.bin";
+
+    ImageWriterHelper image_writer(psram_display);
+
+    req.callback_arg = &image_writer;
+
+    req.headers_fn = http_client_util::http_client_header_print_fn;
+    req.recv_fn = image_data_callback_fn;
+    /* No CA certificate checking */
+    struct altcp_tls_config * tls_config = altcp_tls_create_config_client(NULL, 0);
+    assert(tls_config);
+    req.tls_config = tls_config; // setting tls_config enables https
+    int result = http_client_util::http_client_request_sync(cyw43_arch_async_context(), &req);
+    altcp_tls_free_config(tls_config);
+
+    return Err::OK;
 }
 
 }
