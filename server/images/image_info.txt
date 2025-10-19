@@ -1,2 +1,0 @@
-precip_ts=1760877600
-text=2025-10-19 13:40:00 + 20 mins forecast
