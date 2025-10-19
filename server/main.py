@@ -13,6 +13,7 @@ import argparse
 import shutil
 from PIL import ImageDraw, ImageFont
 import io
+import numpy as np
 
 IMAGES_DIR = Path("images")
 IMAGES_DIR.mkdir(exist_ok=True)
@@ -266,6 +267,11 @@ def build_image():
     # turn the old precip data into the lightest intensity
     # and draw the forecast over it
     # precip_now_img = precip_now_img.
+    # ipdb.set_trace()
+    precip_now_img = np.array(precip_now_img)
+    precip_now_img[precip_now_img[:,:,3] != 0] = intensity_to_color(INTENSITY_MIN)
+    precip_now_img = Image.fromarray(precip_now_img)
+    assert precip_now_img.mode == "RGBA"
     precip_combined_img = Image.new("RGBA", precip_now_img.size)
     precip_combined_img = Image.alpha_composite(precip_combined_img, precip_now_img)
     precip_combined_img = Image.alpha_composite(precip_combined_img, precip_forecast_img)
