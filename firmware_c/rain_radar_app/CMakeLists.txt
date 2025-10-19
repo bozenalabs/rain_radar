@@ -18,12 +18,12 @@ pico_sdk_init()
 add_executable(${NAME}
     main.cpp # <-- Add source files here!
     network_utils.cpp
+    my_example_http_client_util.cpp
+    data_fetching.cpp
 )
 
 target_include_directories(${NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
-
-    ${PICO_LWIP_PATH}/src/apps/altcp_tls/
 )
 
 # Include required libraries
@@ -47,6 +47,7 @@ target_link_libraries(${NAME}
     fatfs
     sdcard
     pico_graphics
+    pico_lwip_http
     pico_lwip_mbedtls
     pico_mbedtls
 )
