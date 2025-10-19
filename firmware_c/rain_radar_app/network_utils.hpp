@@ -10,10 +10,7 @@
 #include "secrets.h"
 #include "inky_frame_7.hpp"
 
-
-
 using namespace pimoroni;
 
-
-
-bool wifi_connect(PicoWireless &wireless, InkyFrame &inky_frame);
+bool wifi_connect(InkyFrame &inky_frame);
+void network_deinit();

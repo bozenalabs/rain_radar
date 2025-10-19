@@ -9,95 +9,131 @@
 #include <pico/stdlib.h>
 #include "pico_wireless.hpp"
 #include "pimoroni_common.hpp"
+#include "pico/cyw43_arch.h"
 
 using namespace pimoroni;
 
 namespace
 {
-class NetworkLedController {
-public:
-    NetworkLedController(std::shared_ptr<InkyFrame> frame, int speed_hz=1)
-      : inky_frame(frame), pulse_speed_hz(speed_hz < 0? 1 : speed_hz) {
-        network_led_timer_active = false;
-      };
-
+  class NetworkLedController
+  {
+  public:
+    NetworkLedController(std::shared_ptr<InkyFrame> frame, int speed_hz)
+        : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz)
+    {
+    };
 
     repeating_timer_t network_led_timer;
-    std::shared_ptr<InkyFrame> inky_frame;
-    int pulse_speed_hz;
-    bool network_led_timer_active;
+    std::shared_ptr<InkyFrame> const inky_frame;
+    int const pulse_speed_hz;
 
-    static bool network_led_callback_static(repeating_timer_t* rt) {
+    static bool network_led_callback_static(repeating_timer_t *rt)
+    {
+      auto self = reinterpret_cast<NetworkLedController *>(rt->user_data);
 
-      auto self = reinterpret_cast<NetworkLedController*>(rt->user_data);
-
+      printf("Network LED timer callback %d\n", self->pulse_speed_hz);
       // ms since boot
       double t_ms = (double)to_ms_since_boot(get_absolute_time());
       // angle = 2*pi * t_ms * freq / 1000
       double angle = 2.0 * M_PI * t_ms * (double)self->pulse_speed_hz / 1000.0;
       double brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
-
+      printf("LED brightness: %.1f\n", brightness);
+      fflush(stdout);
       self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
 
       return true; // keep repeating
     }
 
-  // Start pulsing the network LED at speed_hz
-  void start_pulse_network_led() {
+    // Start pulsing the network LED at speed_hz
+    void start_pulse_network_led()
+    {
 
-    if (network_led_timer_active) {
+
+      add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
+      // important that user_data is set after the timer is added
+
+      network_led_timer.user_data = this;
+    };
+
+    void stop_pulse_network_led()
+    {
         cancel_repeating_timer(&network_led_timer);
-        network_led_timer_active = false;
-    }
-
-    add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
-    network_led_timer_active = true;
+    };
   };
-
-
-  void stop_pulse_network_led() {
-    if (network_led_timer_active) {
-        cancel_repeating_timer(&network_led_timer);
-        network_led_timer_active = false;
-    }
-  };
-
-};
 }
 
-
-
-bool wifi_connect(PicoWireless &wireless, InkyFrame &inky_frame)
+bool wifi_connect(InkyFrame &inky_frame)
 {
-
   NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
-
 
   uint32_t timeout_ms = 10000;
   led_controller.start_pulse_network_led();
   sleep_ms(100); // let the LED start
 
   printf("Connecting to %s...\n", WIFI_SSID);
-  wireless.wifi_set_passphrase(WIFI_SSID, WIFI_PASSWORD);
 
-  IPAddress dns_server = IPAddress(1, 1, 1, 1);
+  if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
+  {
+    printf("failed to initialise\n");
+    return 1;
+  }
+  printf("initialised\n");
+
+  cyw43_arch_enable_sta_mode();
+
+  if (!cyw43_arch_wifi_connect_async(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))
+  {
+    printf("started conncectiopn attempt...\n");
+  }
+  else
+  {
+    printf("failed to start connection\n");
+    return false;
+  }
 
   uint32_t t_start = millis();
 
+  sleep_ms(2000); // wait a bit before checking status
+
   while (millis() - t_start < timeout_ms)
   {
-    if (wireless.get_connection_status() == WL_CONNECTED)
+
+    int link_status = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+    switch (link_status)
     {
+    case CYW43_LINK_DOWN:
+      printf("Wifi status: LINK_DOWN\n");
+      break;
+    case CYW43_LINK_JOIN:
+      printf("Wifi status: LINK_JOIN (associating)\n");
       printf("Connected!\n");
-      wireless.set_dns(1, dns_server, 0);
       led_controller.stop_pulse_network_led();
       inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
       return true;
+      break;
+    case CYW43_LINK_FAIL:
+      printf("Wifi status: LINK_FAIL (connection failed)\n");
+      break;
+    case CYW43_LINK_NONET:
+      printf("Wifi status: LINK_NONET (SSID not found)\n");
+      break;
+    case CYW43_LINK_BADAUTH:
+      printf("Wifi status: LINK_BADAUTH (authentication failure)\n");
+      break;
+    default:
+      if (link_status < 0) {
+        printf("Wifi status: Unknown error %d\n", link_status);
+      }
+      break;
     }
-    sleep_ms(1000);
     printf("Waiting to connect...\n");
+    sleep_ms(1000);
   }
   led_controller.stop_pulse_network_led();
   inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
   return false;
+}
+
+void network_deinit() {
+  cyw43_arch_deinit();
 }

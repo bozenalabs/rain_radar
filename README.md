@@ -26,6 +26,12 @@ Then Cmake build command works.
 put the pico into bootloader and copy over `docker cp 2e933ce5c2cc:/home/appuser/pico/rain_radar_app/build/rain_radar.uf2 /media/hal/RPI-RP2`
 The `Serial Monitor` extension from microsoft works even in the container and I can see the printfs from the board.
 
+
+the pico wireless example isnt an example of using the rasp pi pico w to connect to the internt.
+it is for this board which uses an esp32: https://shop.pimoroni.com/products/pico-wireless-pack
+See this:
+https://datasheets.raspberrypi.com/picow/connecting-to-the-internet-with-pico-w.pdf
+
 ### secrets.py
 > [!IMPORTANT]
 > Create a file named `secrets.py` in the `firmware` folder.
