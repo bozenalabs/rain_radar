@@ -11,6 +11,12 @@ workflow:
 - run the Upload project to Pico command
 - the go to main.py, and Run current file on Pico. you get logs this way
 
+Im trying to write in c following this https://learn.pimoroni.com/article/pico-development-using-wsl.
+Ive made a docker file for it.
+Writing it in C should make it possible to read an image from the server directly into the graphics buffer.
+You can't do this for the 7.3 inch frame.
+See https://github.com/pimoroni/pimoroni-pico/issues/681 and https://github.com/pimoroni/pimoroni-pico/issues/745
+
 
 ### secrets.py
 > [!IMPORTANT]
