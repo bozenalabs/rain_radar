@@ -138,7 +138,19 @@ def convert_to_bitmap(img):
     pal_img.putpalette(PALETTE + (0, 0, 0) * 8 * 31, rawmode='RGB')
 
     # Open the source image and quantize it to our palette
-    quantized_img = img.convert("RGB").quantize(palette=pal_img)
+    quantized_img = img.convert("RGB").quantize(palette=pal_img, dither=Image.Dither.FLOYDSTEINBERG)
+
+
+    # draw color swatches across the top edge using palette indices
+    num_colors = len(PALETTE) // 3
+    square_size = min(DESIRED_WIDTH // num_colors, max(1, DESIRED_HEIGHT // 10))
+
+    for i in range(num_colors):
+        x0 = 200 + i * square_size
+        x1 = min(x0 + square_size, DESIRED_WIDTH)
+        for x in range(x0, x1):
+            for y in range(0, square_size):
+                quantized_img.putpixel((x, y), i)
 
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
@@ -152,6 +164,11 @@ def convert_to_bitmap(img):
             b = (c >> (2 - i)) & 1
             buf[pixel + i * offset] &= ~(1 << bit_offset)
             buf[pixel + i * offset] |= (b << bit_offset)
+    
+    # 3 single bit planes.
+    # plane_0[x,y] = bit 0 of color
+    # plane_1[x,y] = bit 1 of color
+    # plane_2[x,y] = bit 2 of color
     
     framebuffer = bytearray(DESIRED_WIDTH * DESIRED_HEIGHT // 8 * 3)
     for x in range(DESIRED_WIDTH):

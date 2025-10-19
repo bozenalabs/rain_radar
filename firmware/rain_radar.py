@@ -11,7 +11,7 @@ graphics = None
 WIDTH = None
 HEIGHT = None
 
-IMAGE_FILE_NAME = "rain_radar.bin"
+IMAGE_FILE_NAME = "rain_radar.jpg"
 IMAGE_INFO_FILE_NAME = "image_info.json"
 
 # Length of time between updates in minutes.
@@ -29,7 +29,7 @@ TAUPE = 7
 
 error_string = ""
 IMG_URL = "https://muse-hub.taile8f45.ts.net/combined.jpg"
-QUANTIZED_URL = "https://muse-hub.taile8f45.ts.net/quantized.bin"
+QUANTIZED_URL = "https://muse-hub.taile8f45.ts.net/quantized.jpg"
 JSON_URL = "https://muse-hub.taile8f45.ts.net/image_info.json"
 
 def update():
@@ -122,21 +122,21 @@ def iter_color_spans_from_buffer(buf):
 def draw():
     global error_string
     # TODO: https://github.com/pimoroni/inky-frame/blob/main/examples/display_png.py
-    # jpeg = jpegdec.JPEG(graphics)
+    jpeg = jpegdec.JPEG(graphics)
     gc.collect()  # For good measure...
 
     graphics.set_pen(WHITE)
     graphics.clear()
 
     try:
-        # jpeg.open_file(IMAGE_FILE_NAME)
-        # jpeg.decode()
-        print("starting to display image")
-        print(gc.mem_free())
-        with open(IMAGE_FILE_NAME, "rb") as f:
-            for col, span, x, y in iter_color_spans_from_buffer(f.read()):
-                graphics.set_pen(col)
-                graphics.pixel_span(x, y, span)
+        jpeg.open_file(IMAGE_FILE_NAME)
+        jpeg.decode()
+        # print("starting to display image")
+        # print(gc.mem_free())
+        # with open(IMAGE_FILE_NAME, "rb") as f:
+        #     for col, span, x, y in iter_color_spans_from_buffer(f.read()):
+        #         graphics.set_pen(col)
+        #         graphics.pixel_span(x, y, span)
     except OSError:
         graphics.set_pen(RED)
         graphics.rectangle(0, (HEIGHT // 2) - 20, WIDTH, 40)
@@ -165,9 +165,9 @@ def draw():
    
     if error_string != "":
         graphics.set_pen(RED)
-        graphics.rectangle(0, 10, WIDTH, 35)
+        graphics.rectangle(WIDTH//2, HEIGHT - 25, WIDTH//2, 25)
         graphics.set_pen(WHITE)
-        graphics.text(error_string, 5, 16, WIDTH - 5, 2)
+        graphics.text(error_string, WIDTH//2, HEIGHT - 20, WIDTH//2, 2)
 
     gc.collect()
     graphics.update()
