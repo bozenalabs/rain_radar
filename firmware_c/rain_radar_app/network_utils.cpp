@@ -94,13 +94,10 @@ bool wifi_connect(PicoWireless &wireless, InkyFrame &inky_frame)
       inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
       return true;
     }
-    wireless.set_led(255, 0, 0);
-    sleep_ms(500);
-    wireless.set_led(0, 0, 0);
-    sleep_ms(500);
-    printf("...\n");
+    sleep_ms(1000);
+    printf("Waiting to connect...\n");
   }
   led_controller.stop_pulse_network_led();
-  inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid on
+  inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
   return false;
 }

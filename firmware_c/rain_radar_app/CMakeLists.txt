@@ -20,6 +20,10 @@ add_executable(${NAME}
     network_utils.cpp
 )
 
+target_include_directories(${NAME} PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}
+)
+
 # Include required libraries
 # This assumes `pimoroni-pico` is stored alongside your project
 include(common/pimoroni_i2c)
@@ -28,16 +32,13 @@ include(libraries/bitmap_fonts/bitmap_fonts)
 include(libraries/hershey_fonts/hershey_fonts)
 include(libraries/inky_frame_7/inky_frame_7)
 include(libraries/pico_wireless/pico_wireless)
-# include(drivers/psram_display/psram_display)
-# include(drivers/inky73/inky73)/
 include(drivers/fatfs/fatfs)
 include(drivers/sdcard/sdcard)
 
 # Don't forget to link the libraries you need!
 target_link_libraries(${NAME}
+    pico_cyw43_arch_lwip_threadsafe_background 
     pico_stdlib
-    # psram_display
-    # inky73
     inky_frame_7
     hardware_pwm
     hardware_spi
