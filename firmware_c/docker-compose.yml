@@ -5,7 +5,7 @@ services:
     build: .
     image: pico_dev:latest
     volumes:
-      - ./rain_radar_app:/home/appuser/pico/rain_radar_app         # Mount local folder
-    working_dir: /home/appuser/pico/rain_radar_app      # Set working directory
+      - ./rain_radar_app:/root/pico/rain_radar_app         # Mount local folder
+    working_dir: /root/pico/rain_radar_app      # Set working directory
     tty: true             # Keep terminal open
     stdin_open: true      # Allow interactive input

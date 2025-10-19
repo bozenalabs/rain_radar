@@ -22,14 +22,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 
-# Create a non-root developer user and project workspace
-RUN useradd -m appuser
-USER appuser
-RUN mkdir /home/appuser/pico
-WORKDIR /home/appuser/pico
+# Create workspace as root (simpler for CI/CD)
+RUN mkdir /root/pico
+WORKDIR /root/pico
  
 RUN git clone --depth=1 --recursive -b master https://github.com/raspberrypi/pico-sdk.git
-ENV PICO_SDK_PATH=/home/appuser/pico/pico-sdk
+ENV PICO_SDK_PATH=/root/pico/pico-sdk
 RUN git clone --depth=1 -b master https://github.com/raspberrypi/pico-examples.git
 # My branch has support to write directly to the frame buffer
 RUN git clone --depth=1 -b direct_to_frame_buffer https://github.com/bozenalabs/pimoroni-pico.git --recursive

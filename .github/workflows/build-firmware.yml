@@ -24,10 +24,12 @@ jobs:
     - name: Build firmware using Docker Compose
       run: |
         cd firmware_c
-        # Fix permissions for the mounted volume
-        docker compose run --rm --user root rain_radar_app bash -c "
-          chown -R appuser:appuser /home/appuser/pico/rain_radar_app &&
-          su - appuser -c 'cd /home/appuser/pico/rain_radar_app && mkdir -p build && cd build && cmake .. && make -j\$(nproc)'
+        docker compose run --rm rain_radar_app bash -c "
+          cd /root/pico/rain_radar_app &&
+          mkdir -p build &&
+          cd build &&
+          cmake .. &&
+          make -j\$(nproc)
         "
     
     - name: List build artifacts
