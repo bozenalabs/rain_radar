@@ -1,10 +1,5 @@
 #pragma once
 
-#include <cmath>
-#include <hardware/pwm.h>
-#include <hardware/clocks.h>
-#include <pico/time.h>
-#include <pico/stdlib.h>
 #include "pimoroni_common.hpp"
 #include "inky_frame_7.hpp"
 #include "rain_radar_common.hpp"
@@ -12,7 +7,7 @@
 namespace wifi_setup
 {
 
-    Err wifi_connect(pimoroni::InkyFrame &inky_frame);
+    ResultOr<int8_t> wifi_connect(pimoroni::InkyFrame &inky_frame, int8_t preferred_ssid_index);
     void network_deinit(pimoroni::InkyFrame &inky_frame);
     bool is_connected();
 

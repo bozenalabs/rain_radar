@@ -69,10 +69,12 @@ namespace
     {
         cyw43_wifi_scan_options_t scan_options = {0};
         int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
-        if (err == 0)        {
+        if (err == 0)
+        {
             printf("\nPerforming wifi scan\n");
         }
-        else      {
+        else
+        {
             printf("Failed to start scan: %d\n", err);
         }
     }
@@ -89,11 +91,11 @@ namespace
             printf("failed to start connection\n");
             return Err::ERROR;
         }
-        
+
         uint32_t t_start = millis();
-        
+
         sleep_ms(2000); // wait a bit before checking status
-        
+
         uint32_t timeout_ms = 10000;
         while (millis() - t_start < timeout_ms)
         {
@@ -134,13 +136,13 @@ namespace
 
 namespace wifi_setup
 {
-    Err wifi_connect(InkyFrame &inky_frame)
+    ResultOr<int8_t> wifi_connect(InkyFrame &inky_frame, int8_t preferred_ssid_index)
     {
         NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
 
         led_controller.start_pulse_network_led();
         sleep_ms(100); // let the LED start
-        
+
         if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
         {
             printf("failed to initialise\n");
@@ -148,17 +150,25 @@ namespace wifi_setup
         }
         cyw43_arch_enable_sta_mode();
         printf("initialised\n");
-        
-        for (int ssid_index = 0; ssid_index < NUM_KNOWN_SSIDS; ssid_index++)
+
+        int8_t initial_ssid_index = 0;
+        if (preferred_ssid_index >= 0 && preferred_ssid_index < NUM_KNOWN_SSIDS)
         {
-            Err err = try_connect_to_ssid(KNOWN_SSIDS[ssid_index], KNOWN_WIFI_PASSWORDS[ssid_index]);
+            initial_ssid_index = preferred_ssid_index;
+            printf("Trying preferred SSID index %d first\n", preferred_ssid_index);
+        }
+
+        for (int i = 0; i < NUM_KNOWN_SSIDS; i++)
+        {
+            int8_t ssid_attempt_index = (initial_ssid_index + i) % NUM_KNOWN_SSIDS;
+            Err err = try_connect_to_ssid(KNOWN_SSIDS[ssid_attempt_index], KNOWN_WIFI_PASSWORDS[ssid_attempt_index]);
             if (err == Err::OK)
             {
                 led_controller.stop_pulse_network_led();
                 inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
-                return Err::OK;
+                return ResultOr<int8_t>(ssid_attempt_index);
             }
-            else 
+            else
             {
                 printf("Connection attempt timed out: %s\n", resultToString(err).data());
             }

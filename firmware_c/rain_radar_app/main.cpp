@@ -35,18 +35,20 @@ void draw_error(InkyFrame &graphics, const std::string_view &msg)
 
 void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
 {
-    graphics.set_pen(Inky73::BLACK);
-    graphics.rectangle(Rect(0, graphics.height - 25, graphics.width, 25));
+    // graphics.set_pen(Inky73::BLACK);
+    // graphics.rectangle(Rect(0, graphics.height - 25, graphics.width, 25));
     graphics.set_pen(Inky73::WHITE);
     graphics.text(msg, Point(5, graphics.height - 22), graphics.width / 2, 2);
 }
 
 constexpr int HOLD_VSYS_EN = 2;
-void inky_sleep(InkyFrame &frame, int wake_in_minutes) {
+void inky_sleep(InkyFrame &frame, int wake_in_minutes)
+{
     frame.rtc.clear_timer_flag();
-    if(wake_in_minutes != -1) {
-      frame.rtc.set_timer(wake_in_minutes, PCF85063A::TIMER_TICK_1_OVER_60HZ);
-      frame.rtc.enable_timer_interrupt(true, false);
+    if (wake_in_minutes != -1)
+    {
+        frame.rtc.set_timer(wake_in_minutes, PCF85063A::TIMER_TICK_1_OVER_60HZ);
+        frame.rtc.enable_timer_interrupt(true, false);
     }
 
     gpio_put(HOLD_VSYS_EN, false);
@@ -56,16 +58,9 @@ void inky_sleep(InkyFrame &frame, int wake_in_minutes) {
     stdio_flush();
     printf("Waking up\n");
     watchdog_reboot(0, 0, 0);
-    while(true) {}
-}
-
-void persistent_data_test()
-{
-    PersistentData data = read_persistent_data();
-    printf("Read persistent data: mode=%d\n", data.mode);
-    data.mode = (data.mode + 1) % 5;
-    write_persistent_data(&data);
-    printf("Wrote persistent data: mode=%d\n", data.mode);
+    while (true)
+    {
+    }
 }
 
 int main()
@@ -80,7 +75,7 @@ int main()
     InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
     printf("Wakup event: %d\n", event);
 
-    // persistent_data_test();
+    persistent::PersistentData payload = persistent::read();
 
     auto on_error = [&](const std::string_view &msg)
     {
@@ -89,10 +84,17 @@ int main()
         inky_frame.update(true);
     };
 
-    if (wifi_setup::wifi_connect(inky_frame) != Err::OK)
+    ResultOr<int8_t> new_preferred_ssid_index = wifi_setup::wifi_connect(inky_frame, payload.wifi_preferred_ssid_index);
+    if (!new_preferred_ssid_index.ok())
     {
         on_error("WiFi connect failed");
         return -1;
+    }
+    if (new_preferred_ssid_index.unwrap() != payload.wifi_preferred_ssid_index)
+    {
+        payload.wifi_preferred_ssid_index = new_preferred_ssid_index.unwrap();
+        printf("New preferred SSID index: %d\n", payload.wifi_preferred_ssid_index);
+        persistent::save(&payload);
     }
 
     ResultOr<data_fetching::ImageInfo> info = data_fetching::fetch_image_info();
@@ -102,6 +104,10 @@ int main()
         return -1;
     }
 
+    inky_frame.set_pen(Inky73::GREEN);
+    inky_frame.clear();
+
+    // fetching the image will write to the PSRAM display directly
     Err result = data_fetching::fetch_image(inky_frame);
     if (result != Err::OK)
     {
@@ -117,6 +123,6 @@ int main()
     printf("Done, sleeping for %d\n", SLEEP_AFTER_UPDATE_MINUTES);
     inky_sleep(inky_frame, SLEEP_AFTER_UPDATE_MINUTES);
     printf("here\n");
-    
+
     return 0;
 }
