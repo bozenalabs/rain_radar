@@ -171,17 +171,10 @@ def test():
     plt.savefig("test.png", dpi=300, bbox_inches="tight")
 
 
-def build_image():
-    # test()
-    geo_df = tile_xyz_to_geodataframe(TILE_X, TILE_Y, ZOOM)
-    print(geo_df)
-
-    # print(prettymaps.preset("default"))
-
-    # ipdb.set_trace()
+def buil_pretty_map():
     prettymaps.plot(
         "London, UK",
-        radius=20000,
+        radius=5000,
         preset=None,
         use_preset=False,
         circle=None,
@@ -279,7 +272,11 @@ def build_image():
     )
 
     return
-    download_map_image()
+def build_image():
+    # download_map_image()
+    MAP_TILE_FILE = Path("pretty_map.png")
+
+
     precip_ts = 1  # download_precip_image()
     info_path = COMBINED_FILE.parent / "image_info.txt"
     with open(info_path, "w") as f:
@@ -377,15 +374,15 @@ def convert_to_bitmap(img):
     )
 
     # draw color swatches across the top edge using palette indices
-    num_colors = len(PALETTE) // 3
-    square_size = min(DESIRED_WIDTH // num_colors, max(1, DESIRED_HEIGHT // 10))
+    # num_colors = len(PALETTE) // 3
+    # square_size = min(DESIRED_WIDTH // num_colors, max(1, DESIRED_HEIGHT // 10))
 
-    for i in range(num_colors):
-        x0 = 200 + i * square_size
-        x1 = min(x0 + square_size, DESIRED_WIDTH)
-        for x in range(x0, x1):
-            for y in range(0, square_size):
-                quantized_img.putpixel((x, y), i)
+    # for i in range(num_colors):
+    #     x0 = 200 + i * square_size
+    #     x1 = min(x0 + square_size, DESIRED_WIDTH)
+    #     for x in range(x0, x1):
+    #         for y in range(0, square_size):
+    #             quantized_img.putpixel((x, y), i)
 
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
