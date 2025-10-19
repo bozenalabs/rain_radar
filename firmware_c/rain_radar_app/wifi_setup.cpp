@@ -170,7 +170,7 @@ namespace wifi_setup
             }
             else
             {
-                printf("Connection attempt timed out: %s\n", resultToString(err).data());
+                printf("Connection attempt timed out: %s\n", errToString(err).data());
             }
         }
         led_controller.stop_pulse_network_led();

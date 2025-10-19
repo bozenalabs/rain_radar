@@ -28,9 +28,9 @@ void draw_error(InkyFrame &graphics, const std::string_view &msg)
 {
 
     graphics.set_pen(Inky73::RED);
-    graphics.rectangle(Rect(graphics.width / 2, graphics.height - 25, graphics.width / 2, 25));
+    graphics.rectangle(Rect(graphics.width / 3, graphics.height * 2 / 3, graphics.width / 3, graphics.height / 4));
     graphics.set_pen(Inky73::WHITE);
-    graphics.text(msg, Point(graphics.width / 2 + 5, graphics.height - 22), graphics.width / 2, 2);
+    graphics.text(msg, Point(graphics.width / 3 + 5, graphics.height * 2 / 3 + 5), graphics.width / 3 - 5, 2);
 }
 
 void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
@@ -67,7 +67,7 @@ int main()
 {
 
     stdio_init_all();
-    sleep_ms(2000);
+    sleep_ms(500);
 
     InkyFrame inky_frame;
     inky_frame.init();
@@ -77,45 +77,39 @@ int main()
 
     persistent::PersistentData payload = persistent::read();
 
-    auto on_error = [&](const std::string_view &msg)
+    auto on_error = [&](const std::string_view &msg, Err err)
     {
-        printf("Error: %.*s\n", (int)msg.size(), msg.data());
-        draw_error(inky_frame, msg);
+        std::string error_msg = std::string(msg) + " (" + std::string(errToString(err)) + ")";
+        printf("Error: %s\n", error_msg.c_str());
+        draw_error(inky_frame, error_msg);
         inky_frame.update(true);
     };
 
     ResultOr<int8_t> new_preferred_ssid_index = wifi_setup::wifi_connect(inky_frame, payload.wifi_preferred_ssid_index);
     if (!new_preferred_ssid_index.ok())
     {
-        on_error("WiFi connect failed");
+        on_error("WiFi connect failed", new_preferred_ssid_index.result);
         return -1;
     }
-    if (new_preferred_ssid_index.unwrap() != payload.wifi_preferred_ssid_index)
+    int8_t connected_ssid_index = new_preferred_ssid_index.unwrap();
+    if (connected_ssid_index != payload.wifi_preferred_ssid_index)
     {
-        payload.wifi_preferred_ssid_index = new_preferred_ssid_index.unwrap();
+        payload.wifi_preferred_ssid_index = connected_ssid_index;
         printf("New preferred SSID index: %d\n", payload.wifi_preferred_ssid_index);
         persistent::save(&payload);
-    }
-
-    ResultOr<data_fetching::ImageInfo> info = data_fetching::fetch_image_info();
-    if (!info.ok())
-    {
-        on_error("Image info fetch failed");
-        return -1;
     }
 
     inky_frame.set_pen(Inky73::GREEN);
     inky_frame.clear();
 
     // fetching the image will write to the PSRAM display directly
-    Err result = data_fetching::fetch_image(inky_frame);
+    Err result = data_fetching::fetch_image(inky_frame, connected_ssid_index);
     if (result != Err::OK)
     {
-        on_error("Image fetch failed");
+        on_error("Image fetch failed", result);
         return -1;
     }
 
-    draw_lower_left_text(inky_frame, info.unwrap().image_text);
     inky_frame.update(true);
 
     wifi_setup::network_deinit(inky_frame);

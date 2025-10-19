@@ -14,6 +14,6 @@ namespace data_fetching
     };
 
     ResultOr<ImageInfo> fetch_image_info();
-    Err fetch_image(pimoroni::InkyFrame &inky_frame);
+    Err fetch_image(pimoroni::InkyFrame &inky_frame, int8_t connected_ssid_index);
 
 }

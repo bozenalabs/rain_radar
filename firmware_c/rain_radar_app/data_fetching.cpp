@@ -157,8 +157,9 @@ namespace data_fetching
         return ERR_OK;
     }
 
-    Err fetch_image(pimoroni::InkyFrame &inky_frame)
+    Err fetch_image(pimoroni::InkyFrame &inky_frame, int8_t connected_ssid_index)
     {
+        printf("Fetching image for SSID index %d\n", connected_ssid_index);
 
         if (!wifi_setup::is_connected())
         {
@@ -168,7 +169,8 @@ namespace data_fetching
 
         http_client_util::http_req_t req = {0};
         req.hostname = HOST;
-        req.url = "/quantized.bin";
+        std::string url_str = "/" + std::to_string(connected_ssid_index) + "/quantized.bin";
+        req.url = url_str.c_str();
 
         ImageWriterHelper image_writer(inky_frame);
 
@@ -182,8 +184,7 @@ namespace data_fetching
         req.tls_config = tls_config; // setting tls_config enables https
         int result = http_client_util::http_client_request_sync(cyw43_arch_async_context(), &req);
         altcp_tls_free_config(tls_config);
-
-        return Err::OK;
+        return httpStatusToErr(result);
     }
 
 }
