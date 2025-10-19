@@ -7,6 +7,9 @@ https://github.com/pimoroni/inky-frame
 to get bootloader mode, hold BOOTSEL on the rpi and tap reset on the frame.
 
 the vscode micropico plugin is good. Read the getting started for it.
+workflow:
+- run the Upload project to Pico command
+- the go to main.py, and Run current file on Pico. you get logs this way
 
 
 ### secrets.py
@@ -28,3 +31,8 @@ MQTT_PASSWORD = "mqtt-password"
 
 OPENWEATHER_API_KEY = "your-openweather-api-key"
 ```
+
+
+https://tile.openstreetmap.org/9/255/170.png
+
+https://doc.rainbow.ai/api-ref/tiles/

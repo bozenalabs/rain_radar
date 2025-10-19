@@ -1,2 +1,4 @@
 .vscode/
 **/secrets.py
+**/api_secrets.py
+**/__pycache__/
