@@ -18,6 +18,7 @@ PRECIP_TILE_FILE = Path("forecast.png")
 MAP_TILE_FILE = Path("map.png")
 QRCODE_FILE = Path("qrcode.png")
 COMBINED_FILE = Path("publicly_available/combined.jpg")
+QUANTIZED_FILE = Path("publicly_available/quantized.bin")
 
 FORECAST_SECS = 600  # 10 minutes
 
@@ -77,6 +78,9 @@ def qr_code_image():
     img.save(QRCODE_FILE)
     print("Saved QR code image.")
 
+DESIRED_WIDTH = 800
+DESIRED_HEIGHT = 480
+
 def build_image():
     download_map_image()
     precip_ts = download_precip_image()
@@ -88,8 +92,7 @@ def build_image():
         }, f)
     qr_code_image()
 
-    desired_width = 800
-    desired_height = 480
+
 
     with Image.open(MAP_TILE_FILE).convert("RGBA") as map_img, Image.open(PRECIP_TILE_FILE).convert("RGBA") as precip_img, Image.open(QRCODE_FILE).convert("RGBA") as qr_img:
         if map_img.size != precip_img.size:
@@ -98,23 +101,66 @@ def build_image():
         combined.paste(qr_img, (1,52))
         rgb_image = combined.convert("RGB")
         current_width, current_height = rgb_image.size
-        if current_width / current_height > desired_width / desired_height:
+        if current_width / current_height > DESIRED_WIDTH / DESIRED_HEIGHT:
             # too wide
-            cropped_width = current_height * desired_width / desired_height
+            cropped_width = current_height * DESIRED_WIDTH / DESIRED_HEIGHT
             assert cropped_width <= current_width
             cropped_width_start = (current_width - cropped_width) / 2
             bounding_box = (cropped_width_start, 0, cropped_width+cropped_width_start, current_height)
         else:
             # too tall
-            cropped_height = current_width * desired_height / desired_width
+            cropped_height = current_width * DESIRED_HEIGHT / DESIRED_WIDTH
             assert cropped_height <= cropped_height
             cropped_height_start = (current_height - cropped_height) / 2
             bounding_box = (0, cropped_height_start, current_width, cropped_height+cropped_height_start)
 
-        rgb_image = rgb_image.resize((desired_width,desired_height), box=bounding_box, resample=Image.BILINEAR)
+        rgb_image = rgb_image.resize((DESIRED_WIDTH,DESIRED_HEIGHT), box=bounding_box, resample=Image.BILINEAR)
+        convert_to_bitmap(rgb_image)
         rgb_image = ImageEnhance.Color(rgb_image).enhance(1.3)
         rgb_image.save(COMBINED_FILE, progressive=False, quality=85)
         print("Combined map.png and forecast.png into one image.")
+
+PALETTE = (
+    0, 0, 0,        # 1 Black
+    255, 255, 255,  # 2 White
+    0, 255, 0,      # 3 Green
+    0, 0, 255,      # 4 Blue
+    255, 0, 0,      # 5 Red
+    255, 255, 0,    # 6 Yellow
+    255, 140, 0,    # 7 Orange
+    255, 255, 255   # ^3
+)
+def convert_to_bitmap(img):
+
+    # Image to hold the quantize palette
+    pal_img = Image.new("P", (1, 1))
+
+    pal_img.putpalette(PALETTE + (0, 0, 0) * 8 * 31, rawmode='RGB')
+
+    # Open the source image and quantize it to our palette
+    quantized_img = img.convert("RGB").quantize(palette=pal_img)
+
+    # so we can see it
+    quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
+
+    def put_pixel(buf:bytearray, x:int, y:int, c):
+        offset      = (DESIRED_WIDTH * DESIRED_HEIGHT) // 8
+        pixel       = (x // 8) + (y * DESIRED_WIDTH // 8)
+        bit_offset  = 7 - (x & 0b111)
+
+        for i in range(3):
+            b = (c >> (2 - i)) & 1
+            buf[pixel + i * offset] &= ~(1 << bit_offset)
+            buf[pixel + i * offset] |= (b << bit_offset)
+    
+    framebuffer = bytearray(DESIRED_WIDTH * DESIRED_HEIGHT // 8 * 3)
+    for x in range(DESIRED_WIDTH):
+        for y in range(DESIRED_HEIGHT):
+            c = quantized_img.getpixel((x,y))
+            put_pixel(framebuffer, x, y, c)
+    with open(QUANTIZED_FILE, "wb") as f:
+        f.write(framebuffer)
+    print("Wrote quantized framebuffer.")
 
 if __name__ == "__main__":
     build_image()
