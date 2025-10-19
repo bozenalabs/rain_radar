@@ -1,6 +1,5 @@
 import os
 import requests
-import requests
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -13,9 +12,6 @@ import api_secrets
 import json
 import datetime as dt
 import ipdb
-import prettymaps
-import geopandas as gpd
-from shapely.geometry import Polygon
 import math
 
 PRECIP_TILE_FILE = Path("forecast.png")
