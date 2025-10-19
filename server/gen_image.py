@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from PIL import Image, ImageEnhance
 import qrcode
 
-from api_secrets import RAINBOW_API_TOKEN
+import api_secrets 
 import json
 import datetime as dt
 import ipdb
@@ -29,13 +29,13 @@ FORECAST_SECS = 600  # 10 minutes
 
 def get_snapshot_timestamp():
     response = requests.get(
-        f"https://api.rainbow.ai/tiles/v1/snapshot?token={RAINBOW_API_TOKEN}"
+        f"https://api.rainbow.ai/tiles/v1/snapshot?token={api_secrets.RAINBOW_API_TOKEN}"
     )
     return response.json()["snapshot"]
 
 
 def get_tile_handler(snapshot_timestamp: int, zoom: int, x: int, y: int):
-    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{FORECAST_SECS}/{zoom}/{x}/{y}?token={RAINBOW_API_TOKEN}&color=8"
+    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{FORECAST_SECS}/{zoom}/{x}/{y}?token={api_secrets.RAINBOW_API_TOKEN}&color=1"
     # ipdb.set_trace()
     response = requests.get(url, stream=True, timeout=10)
     return response
@@ -171,10 +171,10 @@ def test():
     plt.savefig("test.png", dpi=300, bbox_inches="tight")
 
 
-def buil_pretty_map():
+def build_pretty_map():
     prettymaps.plot(
-        "London, UK",
-        radius=5000,
+        api_secrets.location_query,
+        radius=10000,
         preset=None,
         use_preset=False,
         circle=None,
@@ -194,14 +194,14 @@ def buil_pretty_map():
                     # "pedestrian": 2,
                     # "footway": 1,
                 },
-                "custom_filter":'["highway"~"motorway|trunk|primary|secondary"]',
+                "custom_filter":'["highway"~"motorway|trunk|primary"]',
             },
-            "waterway": {
-                "tags": {"waterway": ["river", "stream"]},
-                "width": {"river": 20, "stream": 10},
-            },
+            # "waterway": {
+            #     "tags": {"waterway": ["river", "stream"]},
+            #     "width": {"river": 20, "stream": 10},
+            # },
             # "building": False,
-            "water": {"tags": {"natural": ["water", "bay"]}},
+            # "water": {"tags": {"natural": ["water", "bay"]}},
             # "sea": False,
             # "forest": False,
             # "green": False,
@@ -274,10 +274,11 @@ def buil_pretty_map():
     return
 def build_image():
     # download_map_image()
+    build_pretty_map()
     MAP_TILE_FILE = Path("pretty_map.png")
 
 
-    precip_ts = 1  # download_precip_image()
+    precip_ts =  download_precip_image()
     info_path = COMBINED_FILE.parent / "image_info.txt"
     with open(info_path, "w") as f:
         f.write(f"precip_ts={precip_ts}\n")
@@ -374,15 +375,16 @@ def convert_to_bitmap(img):
     )
 
     # draw color swatches across the top edge using palette indices
-    # num_colors = len(PALETTE) // 3
-    # square_size = min(DESIRED_WIDTH // num_colors, max(1, DESIRED_HEIGHT // 10))
+    num_colors = len(PALETTE) // 3
 
-    # for i in range(num_colors):
-    #     x0 = 200 + i * square_size
-    #     x1 = min(x0 + square_size, DESIRED_WIDTH)
-    #     for x in range(x0, x1):
-    #         for y in range(0, square_size):
-    #             quantized_img.putpixel((x, y), i)
+    for i in range(num_colors):
+        swatch_width = 70
+        swatch_height = 30
+        x0 = 100 + i * swatch_width
+        x1 = min(x0 + swatch_width, DESIRED_WIDTH)
+        for x in range(x0, x1):
+            for y in range(0, swatch_height):
+                quantized_img.putpixel((x, y), i)
 
     # so we can see it
     quantized_img.convert("RGB").save(COMBINED_FILE.with_name("quantized.jpg"))
