@@ -21,7 +21,7 @@ def get_snapshot_timestamp():
 
 
 def get_tile_handler(snapshot_timestamp: int, forecast_time: int, zoom: int, x: int, y: int):
-    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{forecast_time}/{zoom}/{x}/{y}?token={RAINBOW_API_TOKEN}"
+    url = f"https://api.rainbow.ai/tiles/v1/precip/{snapshot_timestamp}/{forecast_time}/{zoom}/{x}/{y}?token={RAINBOW_API_TOKEN}&color=8"
     response = requests.get(url, stream=True, timeout=10)
     return response
 
@@ -68,7 +68,23 @@ def build_image():
             precip_img = precip_img.resize(map_img.size, resample=Image.BILINEAR)
         combined = Image.alpha_composite(map_img, precip_img)
         rgb_image = combined.convert("RGB")
-        rgb_image = rgb_image.resize((desired_width,desired_height), resample=Image.BILINEAR)
+        current_width, current_height = rgb_image.size
+        if current_width / current_height > desired_width / desired_height:
+            # too wide
+            cropped_width = current_height * desired_width / desired_height
+            assert cropped_width <= current_width
+
+            cropped_width_start = (current_width - cropped_width) / 2
+
+            bounding_box = (cropped_width_start, 0, cropped_width+cropped_width_start, current_height)
+        else:
+            # too tall
+            cropped_height = current_width * desired_height / desired_width
+            assert cropped_height <= cropped_height
+            cropped_height_start = (current_height - cropped_height) / 2
+            bounding_box = (0, cropped_height_start, current_width, cropped_height+cropped_height_start)
+
+        rgb_image = rgb_image.resize((desired_width,desired_height), box=bounding_box, resample=Image.BILINEAR)
         rgb_image.save(COMBINED_FILE)
         print("Combined map.png and forecast.png into one image.")
 
