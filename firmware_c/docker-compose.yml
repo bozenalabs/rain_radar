@@ -9,10 +9,3 @@ services:
     working_dir: /home/appuser/pico/rain_radar_app      # Set working directory
     tty: true             # Keep terminal open
     stdin_open: true      # Allow interactive input
-    command: >
-      bash -c "
-        cd /home/appuser/pico/rain_radar_app &&
-        mkdir -p build &&
-        cd build &&
-        sleep infinity
-      "

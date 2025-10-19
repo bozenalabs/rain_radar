@@ -11,3 +11,8 @@
 
 
 https://www.raspberrypi.com/documentation/pico-sdk/
+
+Note that the pico wireless example isnt an example of using the rasp pi pico w to connect to the internt.
+It's for this board which uses an esp32: https://shop.pimoroni.com/products/pico-wireless-pack
+See this:
+https://datasheets.raspberrypi.com/picow/connecting-to-the-internet-with-pico-w.pdf
