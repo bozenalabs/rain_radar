@@ -1,0 +1,7 @@
+{
+    "cmake.sourceDirectory": "/home/appuser/pico/rain_radar_app",
+    "files.associations": {
+        "string_view": "cpp",
+        "cstdio": "cpp"
+    }
+}
