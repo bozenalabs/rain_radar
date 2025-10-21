@@ -27,7 +27,7 @@ QUANTIZED_BIN_FILE = IMAGES_DIR / ("quantized.bin")
 QUANTIZED_PNG_FILE = IMAGES_DIR / ("quantized.png")
 IMAGE_INFO_FILE = IMAGES_DIR / ("image_info.txt")
 
-INTENSITY_MIN = 9
+INTENSITY_MIN = 20
 INTENSITY_MAX = 127
 
 BLACK = (0, 0, 0)
@@ -81,7 +81,7 @@ import functools as ft
 @ft.lru_cache(maxsize=None)
 def intensity_to_color(intensity: int) -> tuple:
     """Convert DBZ intensity (0-127) to color with linear interpolation between palette colors"""
-    if intensity <= INTENSITY_MIN:
+    if intensity < INTENSITY_MIN:
         return (0, 0, 0, 0)  # Black for no precipitation
     
     # Define color stops with intensity values (0-127 range)
@@ -271,10 +271,12 @@ def build_image():
     precip_now_img = np.array(precip_now_img)
     precip_now_img[precip_now_img[:,:,3] != 0] = intensity_to_color(INTENSITY_MIN)
     precip_now_img = Image.fromarray(precip_now_img)
+    precip_now_img.save("debug_precip_now.png")
     assert precip_now_img.mode == "RGBA"
     precip_combined_img = Image.new("RGBA", precip_now_img.size)
     precip_combined_img = Image.alpha_composite(precip_combined_img, precip_now_img)
     precip_combined_img = Image.alpha_composite(precip_combined_img, precip_forecast_img)
+    precip_combined_img.save("debug_precip_combined.png")
 
     assert map_img.size[0] / map_img.size[1] == precip_combined_img.size[0] / precip_combined_img.size[1]
 
