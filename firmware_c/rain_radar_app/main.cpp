@@ -78,16 +78,14 @@ InkyFrame inky_frame;
 
 int main()
 {
+    inky_frame.init();
+    inky_frame.rtc.clear_timer_flag();
 
     stdio_init_all();
     sleep_ms(2000);
 
-    inky_frame.init();
-
     InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
     printf("Wakup event: %d\n", event);
-
-
 
     persistent::PersistentData payload = persistent::read();
 
@@ -119,6 +117,7 @@ int main()
     Battery battery;
     battery.init();
     printf("Battery status: %s\n", battery.get_status_string());
+    printf("%s", battery.is_usb_powered() ? "USB powered\n" : "Battery powered\n");
 
     inky_frame.set_pen(Inky73::GREEN);
     inky_frame.clear();

@@ -11,54 +11,44 @@
 #include <cmath>
 
 void Battery::init() {
-    // ADC initialization
-    printf("Initializing ADC for battery monitoring\n");
+    // ADC initialization - pin setup is done in read_vsys_voltage()
     adc_init();
-    printf("ADC initialized\n");
-    
-    // Initialize VSYS pin for ADC reading
-    #ifdef PICO_VSYS_PIN
-    printf("Initializing VSYS pin %d for ADC\n", PICO_VSYS_PIN);
-    adc_gpio_init(PICO_VSYS_PIN);
-    #endif
 }
 
 float Battery::read_vsys_voltage() {
     #ifndef PICO_VSYS_PIN
     return -1.0f;
     #else
-    printf("Reading VSYS voltage\n");
+    
     #if CYW43_USES_VSYS_PIN
     cyw43_thread_enter();
     // Make sure cyw43 is awake by reading VBUS pin
     cyw43_arch_gpio_get(CYW43_WL_GPIO_VBUS_PIN);
     #endif
 
-    // Setup ADC for VSYS reading
+    // Setup ADC for VSYS reading (must be done each time on Pico W)
+    adc_gpio_init(PICO_VSYS_PIN);
     adc_select_input(PICO_VSYS_PIN - PICO_FIRST_ADC_PIN);
-    printf("ADC input selected for VSYS\n");
+    
     adc_fifo_setup(true, false, 0, false, false);
     adc_run(true);
 
     // Discard initial readings which tend to be low
     int ignore_count = SAMPLE_COUNT;
-    printf("here");
     while (!adc_fifo_is_empty() || ignore_count-- > 0) {
         (void)adc_fifo_get_blocking();
     }
-    printf("here2");
 
     // Take multiple samples and average them
     uint32_t vsys_sum = 0;
     for(int i = 0; i < SAMPLE_COUNT; i++) {
         uint16_t val = adc_fifo_get_blocking();
+        printf("ADC sample %d: %d\n", i, val);  // Debug print
         vsys_sum += val;
     }
-    printf("here3");
 
     adc_run(false);
     adc_fifo_drain();
-    printf("here4");
 
     uint32_t vsys_avg = vsys_sum / SAMPLE_COUNT;
     
@@ -70,7 +60,8 @@ float Battery::read_vsys_voltage() {
     // VSYS is connected through a 3:1 voltage divider, so multiply by 3
     const float conversion_factor = 3.3f / (1 << 12);  // 12-bit ADC
     float voltage = vsys_avg * 3.0f * conversion_factor;
-    printf("here54");
+    
+    printf("ADC avg: %lu, voltage: %.3f\n", vsys_avg, voltage);  // Debug print
     
     return voltage;
     #endif
@@ -101,7 +92,6 @@ int Battery::get_battery_percentage() {
 }
 
 bool Battery::is_usb_powered() {
-    printf("Checking if USB powered\n");
     #if defined CYW43_WL_GPIO_VBUS_PIN
     // For Pico W, use CYW43 GPIO to check VBUS
     return cyw43_arch_gpio_get(CYW43_WL_GPIO_VBUS_PIN);
@@ -117,7 +107,6 @@ bool Battery::is_usb_powered() {
 }
 
 const char* Battery::get_status_string() {
-    printf("Generating battery status string\n");
     float voltage = get_voltage();
     
     bool usb_powered = is_usb_powered();
