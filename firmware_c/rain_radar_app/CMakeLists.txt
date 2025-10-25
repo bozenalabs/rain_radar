@@ -21,6 +21,7 @@ add_executable(${NAME}
     wifi_setup.cpp
     http_client_util.cpp
     data_fetching.cpp
+    battery.cpp
 )
 
 target_include_directories(${NAME} PRIVATE
@@ -47,6 +48,7 @@ target_link_libraries(${NAME}
     hardware_i2c
     hardware_flash
     hardware_rtc
+    hardware_adc
     fatfs
     sdcard
     pico_graphics

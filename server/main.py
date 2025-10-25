@@ -249,7 +249,7 @@ def build_image():
 
     precip_ts = get_snapshot_timestamp()
     print(f"Snapshot timestamp: {precip_ts}")
-    FORECAST_SECS = 1200  # 20 minutes
+    FORECAST_SECS = 1800
     download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts, FORECAST_SECS)
 
     with open(IMAGE_INFO_FILE, "w") as f:
