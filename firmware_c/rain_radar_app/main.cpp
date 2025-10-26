@@ -23,7 +23,6 @@
 #include "persistent_data.hpp"
 #include "battery.hpp"
 
-
 using namespace pimoroni;
 
 InkyFrame inky_frame;
@@ -44,26 +43,24 @@ void draw_lower_left_text(InkyFrame &graphics, const std::string_view &msg)
     graphics.text(msg, Point(5, graphics.height - 17), graphics.width / 2, 2);
 }
 
-void draw_battery_status(InkyFrame &graphics, Battery &battery)
+void draw_battery_status(InkyFrame &graphics, const char *status)
 {
-    const char* status = battery.get_status_string();
     graphics.set_pen(Inky73::WHITE);
-    
+
     // Measure text width to right-align it
     int text_width = graphics.measure_text(status, 1);
-    int x_position = graphics.width - text_width - 5;  // 5 pixels from right edge
-    
-    graphics.text(status, Point(x_position, 5), graphics.width, 1);  // Small text at top
+    int x_position = graphics.width - text_width - 5; // 5 pixels from right edge
+
+    graphics.text(status, Point(x_position, 5), graphics.width, 1); // Small text at top
 }
 
-
-int main() {
+int main()
+{
     inky_frame.init();
     inky_frame.rtc.unset_alarm();
     inky_frame.rtc.clear_alarm_flag();
     inky_frame.rtc.unset_timer();
     inky_frame.rtc.clear_timer_flag();
-
 
     stdio_init_all();
     sleep_ms(2000);
@@ -81,9 +78,6 @@ int main() {
         .sec = 0,
     };
     inky_frame.rtc.set_datetime(&dt);
-
-
-
 
     persistent::PersistentData payload = persistent::read();
 
@@ -109,14 +103,6 @@ int main() {
         persistent::save(&payload);
     }
 
-    // Initialize battery monitoring
-    // MUST BE INITIALIZED AFTER WIFI SETUP ON PICO W
-    // for some reason it needs cyw43_arch_init() to have been called first
-    Battery battery;
-    battery.init();
-    printf("Battery status: %s\n", battery.get_status_string());
-    printf("%s", battery.is_usb_powered() ? "USB powered\n" : "Battery powered\n");
-
     inky_frame.set_pen(Inky73::GREEN);
     inky_frame.clear();
 
@@ -137,29 +123,25 @@ int main() {
         inky_frame.circle(Point(poi[0], poi[1]), 2);
     }
 
-    draw_battery_status(inky_frame, battery);
+    // Initialize battery monitoring
+    // MUST BE INITIALIZED AFTER WIFI SETUP ON PICO W
+    // for some reason it needs cyw43_arch_init() to have been called first
+    Battery battery;
+    battery.init();
+    const char *status = battery.get_status_string();
+    printf("Battery status: %s\n", status);
+    printf("%s", battery.is_usb_powered() ? "USB powered\n" : "Battery powered\n");
+    draw_battery_status(inky_frame, status);
 
     wifi_setup::network_deinit(inky_frame);
 
     inky_frame.update(true);
 
-    inky_frame.led(InkyFrame::LED_ACTIVITY, 100);
-    sleep_ms(500);
-    inky_frame.led(InkyFrame::LED_ACTIVITY, 0);
-    sleep_ms(500);
-
-    inky_frame.led(InkyFrame::LED_ACTIVITY, 100);
-    sleep_ms(500);
-    inky_frame.led(InkyFrame::LED_ACTIVITY, 0);
-    sleep_ms(500);
-
-    inky_frame.led(InkyFrame::LED_ACTIVITY, 100);
-    sleep_ms(500);
-    inky_frame.led(InkyFrame::LED_ACTIVITY, 0);
-
     printf("done!\n");
 
-    inky_frame.sleep_until(-1, 1, -1, -1);
+    // the rain api updates every 10 mins, and the server runs on a 10 min schedule
+    const int SLEEP_MINS = 10;
+    inky_frame.sleep_until(-1, SLEEP_MINS, -1, -1);
 
     return 0;
 }

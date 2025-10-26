@@ -20,38 +20,33 @@ namespace
     {
     public:
         NetworkLedController(InkyFrame *frame, int speed_hz)
-            : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz) {
-              };
+            : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz)
+        {
+            add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
+            // important that user_data is set after the timer is added
+            network_led_timer.user_data = this;
+        }
 
         repeating_timer_t network_led_timer;
-        InkyFrame * const inky_frame;
+        InkyFrame *const inky_frame;
         int const pulse_speed_hz;
 
         static bool network_led_callback_static(repeating_timer_t *rt)
         {
             auto self = reinterpret_cast<NetworkLedController *>(rt->user_data);
             // ms since boot
-            double t_ms = (double)to_ms_since_boot(get_absolute_time());
+            float t_ms = (float)to_ms_since_boot(get_absolute_time());
             // angle = 2*pi * t_ms * freq / 1000
-            double angle = 2.0 * M_PI * t_ms * (double)self->pulse_speed_hz / 1000.0;
-            double brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
+            float angle = 2.0 * M_PI * t_ms * (float)self->pulse_speed_hz / 1000.0;
+            float brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
             self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
             return true; // keep repeating
         }
 
-        void start_pulse_network_led()
-        {
-            add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
-            // important that user_data is set after the timer is added
-            network_led_timer.user_data = this;
-        };
-
         ~NetworkLedController()
         {
-            // Stop the repeating timer (safe to call even if it wasn't started)
-            // sleep_ms(60); // wait to ensure the timer callback has finished if it was running
             bool res = cancel_repeating_timer(&network_led_timer);
-             printf("Cancelled network LED timer: %8d\n", res);
+            // printf("Cancelled network LED timer: %8d\n", res);
         };
     };
 
@@ -139,11 +134,14 @@ namespace
 
 namespace wifi_setup
 {
-    ResultOr<int8_t> wifi_connect_inner(int8_t preferred_ssid_index)
+    ResultOr<int8_t> wifi_connect(InkyFrame &inky_frame, int8_t preferred_ssid_index)
     {
+        NetworkLedController led_controller(&inky_frame, 1); // 1 Hz pulse
         if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
         {
             printf("failed to initialise\n");
+            inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
+
             return Err::NOT_INITIALISED;
         }
         cyw43_arch_enable_sta_mode();
@@ -162,6 +160,8 @@ namespace wifi_setup
             Err err = try_connect_to_ssid(secrets::KNOWN_SSIDS[ssid_attempt_index], secrets::KNOWN_WIFI_PASSWORDS[ssid_attempt_index]);
             if (err == Err::OK)
             {
+                inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
+
                 return ResultOr<int8_t>(ssid_attempt_index);
             }
             else
@@ -169,27 +169,9 @@ namespace wifi_setup
                 printf("Connection attempt timed out: %s\n", errToString(err).data());
             }
         }
-
+        inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
         return Err::TIMEOUT;
     }
-
-    ResultOr<int8_t> wifi_connect(InkyFrame &inky_frame, int8_t preferred_ssid_index)  {
-        NetworkLedController led_controller(&inky_frame, 1);
-        led_controller.start_pulse_network_led();
-        sleep_ms(100); // let the LED start
-        ResultOr<int8_t> res = wifi_connect_inner(preferred_ssid_index);
-        if (res.ok())
-        {
-            printf("WiFi connected successfully\n");
-            inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
-        }  else {
-            printf("WiFi connection failed\n");
-            inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
-
-        }
-        return res;
-    }
-
 
     bool is_connected()
     {
