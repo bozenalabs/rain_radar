@@ -201,7 +201,7 @@ def qr_code_image():
 DESIRED_WIDTH = 800
 DESIRED_HEIGHT = 480
 
-def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_end_y, ts, forecast_secs):
+def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_end_y, ts, now_offset, forecast_secs):
     map_tiles = {}
     precip_tiles_now = {}
     precip_tiles_forecast = {}
@@ -209,7 +209,7 @@ def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_e
         for y in range(tile_start_y, tile_end_y + 1):
             im_path = download_map_image(zoom, x, y)
             map_tiles[(x, y)] = Image.open(im_path)
-            im_path = download_precip_image(zoom, x, y, ts, 0)
+            im_path = download_precip_image(zoom, x, y, ts, now_offset)
             precip_tiles_now[(x, y)] = Image.open(im_path)
             im_path = download_precip_image(zoom, x, y, ts, forecast_secs)
             precip_tiles_forecast[(x, y)] = Image.open(im_path)
@@ -246,16 +246,26 @@ def download_range_of_tiles(zoom, tile_start_x, tile_start_y, tile_end_x, tile_e
     print("Combined map and precipitation tiles into single images.")
 
 def build_image():
+    # precip_ts = get_snapshot_timestamp()
+    current_time = dt.datetime.now(tz=ZoneInfo("UTC"))
+    snapshot_time = current_time - dt.timedelta(minutes=8)
+    snapshot_time = snapshot_time.replace(minute=(snapshot_time.minute // 10) * 10, second=0, microsecond=0)
 
-    precip_ts = get_snapshot_timestamp()
-    print(f"Snapshot timestamp: {precip_ts}")
+    now_offset = 0
+    if snapshot_time + dt.timedelta(minutes=10) < current_time:
+        now_offset = 600
+    snapshot_time = int(snapshot_time.timestamp())
+    current_map_time = snapshot_time + now_offset
+
+
+    print(f"Snapshot timestamp: {snapshot_time}")
     FORECAST_SECS = 1800
-    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, precip_ts, FORECAST_SECS)
+    download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, snapshot_time, now_offset, FORECAST_SECS)
 
     with open(IMAGE_INFO_FILE, "w") as f:
-        image_text = dt.datetime.fromtimestamp(precip_ts, tz=ZoneInfo("Europe/London")).strftime(
+        image_text = dt.datetime.fromtimestamp(current_map_time, tz=ZoneInfo("Europe/London")).strftime(
                 "%Y-%m-%d %H:%M:%S") + " + " + f"{FORECAST_SECS//60} min forecast"
-        f.write(f"precip_ts={precip_ts}\n")
+        f.write(f"precip_ts={current_map_time}\n")
         f.write(f"text={image_text}\n")
 
     qr_code_image()
