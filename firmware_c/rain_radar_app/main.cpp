@@ -137,9 +137,9 @@ int main() {
         inky_frame.circle(Point(poi[0], poi[1]), 2);
     }
 
-    // draw_battery_status(inky_frame, battery);
+    draw_battery_status(inky_frame, battery);
 
-    // wifi_setup::network_deinit(inky_frame);
+    wifi_setup::network_deinit(inky_frame);
 
     inky_frame.update(true);
 
