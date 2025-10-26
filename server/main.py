@@ -347,7 +347,7 @@ def convert_to_bitmap(img):
 
     # draw a bar in the bottom right showing the colour intesity legend using intensity_to_color
     if add_legend := True:
-        legend_width = 415
+        legend_width = 400
         legend_start_x = DESIRED_WIDTH - legend_width - 3
         legend_height = 16
         legend_start_y = DESIRED_HEIGHT - legend_height - 3
