@@ -19,11 +19,12 @@ namespace
     class NetworkLedController
     {
     public:
-        NetworkLedController(int speed_hz)
-            : pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz), is_running(false) {
+        NetworkLedController(InkyFrame *frame, int speed_hz)
+            : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz), is_running(false) {
               };
 
         repeating_timer_t network_led_timer;
+        InkyFrame * const inky_frame;
         int const pulse_speed_hz;
         bool is_running = false;
 
@@ -35,7 +36,7 @@ namespace
             // angle = 2*pi * t_ms * freq / 1000
             double angle = 2.0 * M_PI * t_ms * (double)self->pulse_speed_hz / 1000.0;
             double brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
-            // self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
+            self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
             return self->is_running; // keep repeating
         }
 
@@ -53,7 +54,7 @@ namespace
             is_running = false;
             sleep_ms(60); // wait to ensure the timer callback has finished if it was running
             bool res = cancel_repeating_timer(&network_led_timer);
-             printf("Cancelled network LED timer: %d\n", res);
+             printf("Cancelled network LED timer: %8d\n", res);
         };
     };
 
@@ -141,7 +142,7 @@ namespace
 
 namespace wifi_setup
 {
-    ResultOr<int8_t> wifi_connect_inner(InkyFrame &inky_frame, int8_t preferred_ssid_index)
+    ResultOr<int8_t> wifi_connect_inner(int8_t preferred_ssid_index)
     {
         if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
         {
@@ -176,10 +177,10 @@ namespace wifi_setup
     }
 
     ResultOr<int8_t> wifi_connect(InkyFrame &inky_frame, int8_t preferred_ssid_index)  {
-        NetworkLedController led_controller(1);
+        NetworkLedController led_controller(&inky_frame, 1);
         led_controller.start_pulse_network_led();
         sleep_ms(100); // let the LED start
-        ResultOr<int8_t> res = wifi_connect_inner(inky_frame, preferred_ssid_index);
+        ResultOr<int8_t> res = wifi_connect_inner(preferred_ssid_index);
         if (res.ok())
         {
             printf("WiFi connected successfully\n");
