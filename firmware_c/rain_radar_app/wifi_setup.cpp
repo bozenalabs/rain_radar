@@ -19,12 +19,11 @@ namespace
     class NetworkLedController
     {
     public:
-        NetworkLedController(std::shared_ptr<InkyFrame> frame, int speed_hz)
-            : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz), is_running(false) {
+        NetworkLedController(int speed_hz)
+            : pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz), is_running(false) {
               };
 
         repeating_timer_t network_led_timer;
-        std::shared_ptr<InkyFrame> const inky_frame;
         int const pulse_speed_hz;
         bool is_running = false;
 
@@ -36,7 +35,7 @@ namespace
             // angle = 2*pi * t_ms * freq / 1000
             double angle = 2.0 * M_PI * t_ms * (double)self->pulse_speed_hz / 1000.0;
             double brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
-            self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
+            // self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
             return self->is_running; // keep repeating
         }
 
@@ -177,7 +176,7 @@ namespace wifi_setup
     }
 
     ResultOr<int8_t> wifi_connect(InkyFrame &inky_frame, int8_t preferred_ssid_index)  {
-        NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
+        NetworkLedController led_controller(1);
         led_controller.start_pulse_network_led();
         sleep_ms(100); // let the LED start
         ResultOr<int8_t> res = wifi_connect_inner(inky_frame, preferred_ssid_index);
