@@ -20,13 +20,12 @@ namespace
     {
     public:
         NetworkLedController(InkyFrame *frame, int speed_hz)
-            : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz), is_running(false) {
+            : inky_frame(frame), pulse_speed_hz(speed_hz < 0 ? 1 : speed_hz) {
               };
 
         repeating_timer_t network_led_timer;
         InkyFrame * const inky_frame;
         int const pulse_speed_hz;
-        bool is_running = false;
 
         static bool network_led_callback_static(repeating_timer_t *rt)
         {
@@ -37,12 +36,11 @@ namespace
             double angle = 2.0 * M_PI * t_ms * (double)self->pulse_speed_hz / 1000.0;
             double brightness = (sin(angle) * 40.0) + 60.0; // -> range [20,100]
             self->inky_frame->led(InkyFrame::LED_CONNECTION, (uint8_t)brightness);
-            return self->is_running; // keep repeating
+            return true; // keep repeating
         }
 
         void start_pulse_network_led()
         {
-            is_running = true;
             add_repeating_timer_ms(50, network_led_callback_static, nullptr, &network_led_timer);
             // important that user_data is set after the timer is added
             network_led_timer.user_data = this;
@@ -51,8 +49,7 @@ namespace
         ~NetworkLedController()
         {
             // Stop the repeating timer (safe to call even if it wasn't started)
-            is_running = false;
-            sleep_ms(60); // wait to ensure the timer callback has finished if it was running
+            // sleep_ms(60); // wait to ensure the timer callback has finished if it was running
             bool res = cancel_repeating_timer(&network_led_timer);
              printf("Cancelled network LED timer: %8d\n", res);
         };

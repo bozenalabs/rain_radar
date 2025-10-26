@@ -143,8 +143,6 @@ int main() {
 
     inky_frame.update(true);
 
-
-
     inky_frame.led(InkyFrame::LED_ACTIVITY, 100);
     sleep_ms(500);
     inky_frame.led(InkyFrame::LED_ACTIVITY, 0);
