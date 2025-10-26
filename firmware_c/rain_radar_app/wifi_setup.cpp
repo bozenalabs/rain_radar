@@ -138,9 +138,9 @@ namespace wifi_setup
 {
     ResultOr<int8_t> wifi_connect(InkyFrame &inky_frame, int8_t preferred_ssid_index)
     {
-        NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
+        // NetworkLedController led_controller(std::make_shared<InkyFrame>(inky_frame), 1);
 
-        led_controller.start_pulse_network_led();
+        // led_controller.start_pulse_network_led();
         sleep_ms(100); // let the LED start
 
         if (cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
@@ -164,7 +164,7 @@ namespace wifi_setup
             Err err = try_connect_to_ssid(secrets::KNOWN_SSIDS[ssid_attempt_index], secrets::KNOWN_WIFI_PASSWORDS[ssid_attempt_index]);
             if (err == Err::OK)
             {
-                led_controller.stop_pulse_network_led();
+                // led_controller.stop_pulse_network_led();
                 inky_frame.led(InkyFrame::LED_CONNECTION, 100); // solid on
                 return ResultOr<int8_t>(ssid_attempt_index);
             }
@@ -173,7 +173,7 @@ namespace wifi_setup
                 printf("Connection attempt timed out: %s\n", errToString(err).data());
             }
         }
-        led_controller.stop_pulse_network_led();
+        // led_controller.stop_pulse_network_led();
         inky_frame.led(InkyFrame::LED_CONNECTION, 0); // solid off
         return Err::TIMEOUT;
     }

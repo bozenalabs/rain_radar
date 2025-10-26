@@ -95,7 +95,7 @@ int main() {
     //     inky_frame.update(true);
     // };
 
-    // ResultOr<int8_t> new_preferred_ssid_index = wifi_setup::wifi_connect(inky_frame, payload.wifi_preferred_ssid_index);
+    ResultOr<int8_t> new_preferred_ssid_index = wifi_setup::wifi_connect(inky_frame, payload.wifi_preferred_ssid_index);
     // if (!new_preferred_ssid_index.ok())
     // {
     //     on_error("WiFi connect failed", new_preferred_ssid_index.result);
