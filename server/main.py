@@ -263,9 +263,11 @@ def build_image():
     download_range_of_tiles(ZOOM, TILE_X, TILE_Y, TILE_X+1, TILE_Y+1, snapshot_time, now_offset, FORECAST_SECS)
 
     with open(IMAGE_INFO_FILE, "w") as f:
+        current_time_dt = int(dt.datetime.now(tz=ZoneInfo("Europe/London")).timestamp())
+
         image_text = dt.datetime.fromtimestamp(current_map_time, tz=ZoneInfo("Europe/London")).strftime(
                 "%Y-%m-%d %H:%M:%S") + " + " + f"{FORECAST_SECS//60} min forecast"
-        f.write(f"precip_ts={current_map_time}\n")
+        f.write(f"local_time={current_time_dt}\n")
         f.write(f"text={image_text}\n")
 
     qr_code_image()
