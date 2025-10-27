@@ -7,21 +7,23 @@
 #include <stdio.h>
 #include <string>
 
+
+#include "battery.hpp"
+#include "data_fetching.hpp"
 #include "drivers/inky73/inky73.hpp"
 #include "drivers/psram_display/psram_display.hpp"
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
 #include "hardware/watchdog.h"
 #include "inky_frame_7.hpp"
-#include "wifi_setup.hpp"
+#include "persistent_data.hpp"
 #include "pico/stdlib.h"
 #include "pimoroni_common.hpp"
-#include "secrets.h"
-#include "data_fetching.hpp"
 #include "rain_radar_common.hpp"
-#include "persistent_data.hpp"
-#include "battery.hpp"
+#include "secrets.h"
+#include "wifi_setup.hpp"
 
 using namespace pimoroni;
 
@@ -85,7 +87,7 @@ std::pair<Err, std::string> run_app()
     }
 
     inky_frame.set_pen(Inky73::GREEN);
-    inky_frame.clear();
+    // inky_frame.clear();
 
     // fetching the image will write to the PSRAM display directly
     Err const err = data_fetching::fetch_image(inky_frame, connected_ssid_index);
@@ -126,7 +128,19 @@ int main()
     inky_frame.rtc.clear_timer_flag();
 
     stdio_init_all();
-    sleep_ms(500);
+    sleep_ms(100);
+
+    // Reducing system clocked resulted in wifi connection issues
+    // I think the pico couldn't keep up with the data rate
+    // Reduce CPU clock to 96 MHz to lower power consumption.
+    // set_sys_clock_khz takes kHz and returns true on success.
+    // const uint32_t target_khz = 96000;
+    // if (!set_sys_clock_khz(target_khz, true)) {
+    //     printf("Warning: failed to set system clock to %u kHz\n", target_khz);
+    // } else {
+    //     printf("System clock set to %u kHz\n", target_khz);
+    // }
+
 
     InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
     printf("Wakup event: %d\n", event);
