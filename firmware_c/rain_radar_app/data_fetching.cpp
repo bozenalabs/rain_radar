@@ -34,37 +34,42 @@
 namespace data_fetching
 {
     // Parse HTTP date string like "Mon, 27 Oct 2025 21:09:46 GMT" to datetime_t
-    bool parse_http_date(const char* date_str, datetime_t* dt) {
+    bool parse_http_date(const char *date_str, datetime_t *dt)
+    {
         // Month names for parsing
-        const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-        
+        const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
         char day_name[4], month_name[4];
         int day, year, hour, min, sec;
-        
+
         // Parse format: "Mon, 27 Oct 2025 21:09:46 GMT"
-        int parsed = sscanf(date_str, "%3s, %d %3s %d %d:%d:%d GMT", 
-                           day_name, &day, month_name, &year, &hour, &min, &sec);
-        
-        if (parsed != 7) {
-            printf("Failed to parse date string: %s\n", date_str);
+        int parsed = sscanf(date_str, "Date: %3s, %d %3s %d %d:%d:%d GMT",
+                            day_name, &day, month_name, &year, &hour, &min, &sec);
+
+        if (parsed != 7)
+        {
+            printf("Failed to parse date string\n");
             return false;
         }
-        
+
         // Find month number (1-12)
         int month = 0;
-        for (int i = 0; i < 12; i++) {
-            if (strncmp(month_name, months[i], 3) == 0) {
+        for (int i = 0; i < 12; i++)
+        {
+            if (strncmp(month_name, months[i], 3) == 0)
+            {
                 month = i + 1;
                 break;
             }
         }
-        
-        if (month == 0) {
+
+        if (month == 0)
+        {
             printf("Invalid month in date string: %s\n", month_name);
             return false;
         }
-        
+
         // Fill datetime_t structure
         dt->year = year;
         dt->month = month;
@@ -73,10 +78,10 @@ namespace data_fetching
         dt->min = min;
         dt->sec = sec;
         dt->dotw = 0; // Day of week - we could calculate this but it's not critical
-        
-        printf("Parsed date: %04d-%02d-%02d %02d:%02d:%02d\n", 
+
+        printf("Parsed date: %04d-%02d-%02d %02d:%02d:%02d\n",
                dt->year, dt->month, dt->day, dt->hour, dt->min, dt->sec);
-        
+
         return true;
     }
 
@@ -136,7 +141,6 @@ namespace data_fetching
     //     return ERR_OK;
     // }
 
-
     struct ImageWriterHelper
     {
         datetime_t server_datetime;
@@ -146,7 +150,11 @@ namespace data_fetching
         Err result;
 
         ImageWriterHelper(pimoroni::InkyFrame &inky_frame)
-            : psram_display(inky_frame.ramDisplay), max_address_write(inky_frame.width * inky_frame.height), offset(0), result(Err::OK)
+            : server_datetime({0})
+            , psram_display(inky_frame.ramDisplay)
+            , max_address_write(inky_frame.width * inky_frame.height)
+            , offset(0)
+            , result(Err::OK)
         {
         }
     };
@@ -155,54 +163,37 @@ namespace data_fetching
     {
         printf("\nheaders %u\n", hdr_len);
         ImageWriterHelper *info = (ImageWriterHelper *)arg;
-        
-        // Extract headers as a string for parsing
-        char header_buffer[1024];
-        size_t buf_pos = 0;
-        
-        u16_t offset = 0;
-        while (offset < hdr->tot_len && offset < hdr_len && buf_pos < sizeof(header_buffer) - 1)
-        {
-            char c = (char)pbuf_get_at(hdr, offset++);
-            printf("%c", c);
-            header_buffer[buf_pos++] = c;
-        }
-        header_buffer[buf_pos] = '\0';
-        
+
+        const char *header_buffer = (const char *)hdr->payload;
+        size_t header_buffer_len = hdr->len;
+
         // Look for Date header
-        const char* date_header = "Date: ";
-        char* date_start = strstr(header_buffer, date_header);
-        if (date_start) {
-            date_start += strlen(date_header); // Skip "Date: "
-            
-            // Find end of line
-            char* date_end = strstr(date_start, "\r\n");
-            if (!date_end) {
-                date_end = strstr(date_start, "\n");
+        const char *date_header = "Date: ";
+        const char *date_start = strnstr(header_buffer, date_header, header_buffer_len);
+        // date_start might not be null terminate!
+        if (date_start)
+        {
+            char safe_buffer[64];
+            size_t copy_len = strnlen(date_start, sizeof(safe_buffer) - 1);
+            memcpy(safe_buffer, date_start, copy_len);
+            safe_buffer[copy_len] = '\0';
+            printf("Found Date header: %s\n", safe_buffer);
+
+            // Parse the date directly - sscanf will stop at the end of the valid format
+            if (parse_http_date(safe_buffer, &info->server_datetime))
+            {
+                printf("Successfully parsed server datetime\n");
             }
-            
-            if (date_end) {
-                // Extract date string
-                size_t date_len = date_end - date_start;
-                char date_str[128];
-                if (date_len < sizeof(date_str)) {
-                    strncpy(date_str, date_start, date_len);
-                    date_str[date_len] = '\0';
-                    
-                    printf("Found Date header: %s\n", date_str);
-                    
-                    // Parse the date
-                    if (parse_http_date(date_str, &info->server_datetime)) {
-                        printf("Successfully parsed server datetime\n");
-                    } else {
-                        printf("Failed to parse server datetime\n");
-                    }
-                }
+            else
+            {
+                printf("Failed to parse server datetime\n");
             }
-        } else {
+        }
+        else
+        {
             printf("No Date header found\n");
         }
-        
+
         return ERR_OK;
     }
 
@@ -237,8 +228,6 @@ namespace data_fetching
     //     return result ? Err::ERROR : ResultOr(info);
     // }
 
-
-
     err_t image_data_callback_fn(void *_arg, __unused struct altcp_pcb *conn, struct pbuf *p, err_t err)
     {
         if (err != ERR_OK || p == NULL)
@@ -271,7 +260,8 @@ namespace data_fetching
         return ERR_OK;
     }
 
-    void result_fn(void *arg, httpc_result_t httpc_result, u32_t rx_content_len, u32_t srv_res, err_t err) {
+    void result_fn(void *arg, httpc_result_t httpc_result, u32_t rx_content_len, u32_t srv_res, err_t err)
+    {
         // httpc_result is already passed as req->result.
         // set arg to result
         ImageWriterHelper *image_writer = (ImageWriterHelper *)arg;
@@ -294,7 +284,6 @@ namespace data_fetching
         req.url = url_str.c_str();
         printf("Requesting URL: %s from %s\n", req.url, req.hostname);
 
-
         ImageWriterHelper image_writer(inky_frame);
 
         req.callback_arg = &image_writer;
@@ -316,8 +305,15 @@ namespace data_fetching
             return image_writer.result;
         }
 
-        if (result) {
+        if (result)
+        {
             return Err::ERROR;
+        }
+
+        if (image_writer.server_datetime.year == 0)
+        {
+            printf("No valid server datetime received\n");
+            return Err::COULDNT_PARSE_DATE;
         }
         return ResultOr<datetime_t>(image_writer.server_datetime);
     }
