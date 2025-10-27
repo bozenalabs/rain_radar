@@ -60,23 +60,6 @@ void draw_battery_status(InkyFrame &graphics, const char *status)
     graphics.text(status, Point(x_position, 5), graphics.width, 1); // Small text at top
 }
 
-void draw_next_wakeup(InkyFrame &graphics, int hour, int minute)
-{
-    std::ostringstream oss;
-    if (hour >= 0) {
-        oss << "Next update at " << std::setfill('0') << std::setw(2) << hour << ":"
-            << std::setfill('0') << std::setw(2) << minute;
-    } else {
-        oss << "Next update in " << minute << " min";
-    }
-
-    int text_width = graphics.measure_text(oss.str(), 1);
-
-    graphics.set_pen(Inky73::WHITE);
-    graphics.text(oss.str(), Point(graphics.width-60 - text_width, 5), graphics.width, 1);
-}
-
-
 datetime_t dt = {
     .year = 0,
     .month = 0,
@@ -86,6 +69,31 @@ datetime_t dt = {
     .min = 0,
     .sec = 0,
 };
+
+
+void draw_next_wakeup(InkyFrame &graphics, int hour, int minute)
+{
+    std::ostringstream oss;
+    if (hour >= 0) {
+        oss << "Next update at " << std::setfill('0') << std::setw(2) << hour << ":"
+            << std::setfill('0') << std::setw(2) << minute;
+    } else {
+        int mins_to_wakeup;
+        if (minute < dt.min) {
+            mins_to_wakeup = (minute + 60) - dt.min;
+        } else {
+            mins_to_wakeup = minute - dt.min;
+        }
+        oss << "Next update in " << mins_to_wakeup << " min";
+    }
+
+    int text_width = graphics.measure_text(oss.str(), 1);
+
+    graphics.set_pen(Inky73::WHITE);
+    graphics.text(oss.str(), Point(graphics.width-60 - text_width, 5), graphics.width, 1);
+}
+
+
 
 std::pair<Err, std::string> run_app()
 {
@@ -108,30 +116,46 @@ std::pair<Err, std::string> run_app()
     inky_frame.set_pen(Inky73::GREEN);
     // inky_frame.clear();
 
-    ResultOr<data_fetching::ImageInfo> image_info_result = data_fetching::fetch_image_info(connected_ssid_index);
-    if (!image_info_result.ok())
-    {
-        return {image_info_result.err, "Image info fetch failed"};
-    } else {
-        // Convert Unix timestamp to datetime_t and set RTC
-        // datetime_t dt;
-        int64_t update_timestamp = image_info_result.unwrap().update_ts;
-        time_t unix_time = (time_t)update_timestamp;
+    // ResultOr<data_fetching::ImageInfo> image_info_result = data_fetching::fetch_image_info(connected_ssid_index);
+    // if (!image_info_result.ok())
+    // {
+    //     return {image_info_result.err, "Image info fetch failed"};
+    // } else {
+    //     data_fetching::ImageInfo image_info = image_info_result.unwrap();
+        
+    //     // Use server datetime if available, otherwise convert Unix timestamp
+    //     if (image_info.has_server_datetime) {
+    //         dt = image_info.server_datetime;
+    //         printf("Using server datetime: %04d-%02d-%02d %02d:%02d:%02d\n", 
+    //                dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
+    //     } else {
+    //         // Fallback to Unix timestamp conversion
+    //         int64_t update_timestamp = image_info.update_ts;
 
-        if (time_to_datetime(unix_time, &dt)) {
-            printf("Setting RTC to: %04d-%02d-%02d %02d:%02d:%02d\n", 
-                   dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
-            // inky_frame.rtc.set_datetime(&dt);
-        } else {
-            printf("Failed to convert timestamp %lld to datetime\n", update_timestamp);
-        }
-    }
+    //         if (time_to_datetime(unix_time, &dt)) {
+    //             printf("Using converted Unix timestamp: %04d-%02d-%02d %02d:%02d:%02d\n", 
+    //                    dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
+    //         } else {
+    //             printf("Failed to convert timestamp %lld to datetime\n", update_timestamp);
+    //             // Set a default datetime if conversion fails
+    //             dt.year = 2025;
+    //             dt.month = 1;
+    //             dt.day = 1;
+    //             dt.hour = 0;
+    //             dt.min = 0;
+    //             dt.sec = 0;
+    //             dt.dotw = 0;
+    //         }
+    //     }
+    // }
 
     // fetching the image will write to the PSRAM display directly
-    Err const err = data_fetching::fetch_image(inky_frame, connected_ssid_index);
-    if (err != Err::OK)
+    ResultOr<datetime_t> const res = data_fetching::fetch_image(inky_frame, connected_ssid_index);
+    if (!res.ok())
     {
-        return {err, "Image fetch failed"};
+        return {res.err, "Image fetch failed"};
+    } else {
+        dt = res.unwrap();
     }
 
     // points of interest
@@ -165,8 +189,8 @@ int main()
     inky_frame.rtc.unset_timer();
     inky_frame.rtc.clear_timer_flag();
 
+    // get the rtc ticking
     inky_frame.rtc.set_datetime(&dt);
-
 
     stdio_init_all();
     sleep_ms(100);
@@ -182,15 +206,14 @@ int main()
     //     printf("System clock set to %u kHz\n", target_khz);
     // }
 
-
     InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
     printf("Wakup event: %d\n", event);
 
     auto [app_err, app_msg] = run_app();
 
+    // the rain api updates every 10 mins, and the server runs on a 10 min schedule
     int next_wakeup_min = 10;
     int next_wakeup_hour = -1;
-
 
     if (app_err != Err::OK) {
         std::string error_msg = std::string(app_msg) + " (" + std::string(errToString(app_err)) + ")";
@@ -203,12 +226,15 @@ int main()
             next_wakeup_min = 0;
         } else {
             next_wakeup_hour = -1;
-            next_wakeup_min = 10;
+            next_wakeup_min = (dt.min+1 + 10) / 10 * 10;
+            if (next_wakeup_min >= 60)
+            {
+                next_wakeup_min -= 60;
+            }
         }
     }
 
     draw_next_wakeup(inky_frame, next_wakeup_hour, next_wakeup_min);
-
 
     if (wifi_setup::is_connected()) {
         wifi_setup::network_deinit(inky_frame);
@@ -218,9 +244,7 @@ int main()
 
     printf("done!\n");
 
-    // the rain api updates every 10 mins, and the server runs on a 10 min schedule
-    const int SLEEP_MINS = 10;
-    inky_frame.sleep_until(-1, SLEEP_MINS, -1, -1);
+    inky_frame.sleep_until(-1, next_wakeup_min, next_wakeup_hour, -1);
 
     return 0;
 }
