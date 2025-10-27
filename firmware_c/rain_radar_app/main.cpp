@@ -54,46 +54,27 @@ void draw_battery_status(InkyFrame &graphics, const char *status)
     graphics.text(status, Point(x_position, 5), graphics.width, 1); // Small text at top
 }
 
-int main()
+
+static datetime_t ZERO_DT = {
+    .year = 0,
+    .month = 0,
+    .day = 0,
+    .dotw = 0,
+    .hour = 0,
+    .min = 0,
+    .sec = 0,
+};
+
+std::pair<Err, std::string> run_app()
 {
-    inky_frame.init();
-    inky_frame.rtc.unset_alarm();
-    inky_frame.rtc.clear_alarm_flag();
-    inky_frame.rtc.unset_timer();
-    inky_frame.rtc.clear_timer_flag();
-
-    stdio_init_all();
-    sleep_ms(2000);
-
-    InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
-    printf("Wakup event: %d\n", event);
-
-    datetime_t dt = {
-        .year = 0,
-        .month = 0,
-        .day = 0,
-        .dotw = 0,
-        .hour = 0,
-        .min = 0,
-        .sec = 0,
-    };
-    inky_frame.rtc.set_datetime(&dt);
+    inky_frame.rtc.set_datetime(&ZERO_DT);
 
     persistent::PersistentData payload = persistent::read();
-
-    auto on_error = [&](const std::string_view &msg, Err err)
-    {
-        std::string error_msg = std::string(msg) + " (" + std::string(errToString(err)) + ")";
-        printf("Error: %s\n", error_msg.c_str());
-        draw_error(inky_frame, error_msg);
-        inky_frame.update(true);
-    };
 
     ResultOr<int8_t> new_preferred_ssid_index = wifi_setup::wifi_connect(inky_frame, payload.wifi_preferred_ssid_index);
     if (!new_preferred_ssid_index.ok())
     {
-        on_error("WiFi connect failed", new_preferred_ssid_index.result);
-        return -1;
+        return {new_preferred_ssid_index.err, "WiFi connect failed"};
     }
     int8_t connected_ssid_index = new_preferred_ssid_index.unwrap();
     if (connected_ssid_index != payload.wifi_preferred_ssid_index)
@@ -107,11 +88,10 @@ int main()
     inky_frame.clear();
 
     // fetching the image will write to the PSRAM display directly
-    Err result = data_fetching::fetch_image(inky_frame, connected_ssid_index);
-    if (result != Err::OK)
+    Err const err = data_fetching::fetch_image(inky_frame, connected_ssid_index);
+    if (err != Err::OK)
     {
-        on_error("Image fetch failed", result);
-        return -1;
+        return {err, "Image fetch failed"};
     }
 
     // points of interest
@@ -133,8 +113,36 @@ int main()
     printf("%s", battery.is_usb_powered() ? "USB powered\n" : "Battery powered\n");
     draw_battery_status(inky_frame, status);
 
-    wifi_setup::network_deinit(inky_frame);
+    return {Err::OK, ""};
 
+}
+
+int main()
+{
+    inky_frame.init();
+    inky_frame.rtc.unset_alarm();
+    inky_frame.rtc.clear_alarm_flag();
+    inky_frame.rtc.unset_timer();
+    inky_frame.rtc.clear_timer_flag();
+
+    stdio_init_all();
+    sleep_ms(500);
+
+    InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
+    printf("Wakup event: %d\n", event);
+
+    auto [app_err, app_msg] = run_app();
+
+    if (app_err != Err::OK) {
+        std::string error_msg = std::string(app_msg) + " (" + std::string(errToString(app_err)) + ")";
+        printf("Error: %s\n", error_msg.c_str());
+        draw_error(inky_frame, error_msg);
+    }
+
+    if (wifi_setup::is_connected()) {
+        wifi_setup::network_deinit(inky_frame);
+    }
+    
     inky_frame.update(true);
 
     printf("done!\n");

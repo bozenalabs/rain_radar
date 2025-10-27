@@ -147,15 +147,16 @@ struct ResultOr
 {
     static_assert(!std::is_same_v<T, Err>, "ResultOr<T> cannot have T = Result");
 
-    Err result;
+    Err const err;
     T value;
 
-    bool ok() const { return result == Err::OK; };
+    bool ok() const { return err == Err::OK; };
     const T &unwrap() const
     {
         if (!ok())
         {
-            printf("Tried to unwrap a ResultOr that was not OK: %s\n", errToString(result).data());
+            printf("Tried to unwrap a ResultOr that was not OK: %s\n", errToString(err).data());
+            assert(false);
         }
         return value;
     }
@@ -163,9 +164,9 @@ struct ResultOr
     ResultOr() = delete;
 
     // this one can be implicit
-    ResultOr(Err r) : result(r), value()
+    ResultOr(Err r) : err(r), value()
     {
         assert(r != Err::OK);
     }
-    explicit ResultOr(T v) : result(Err::OK), value(v) {}
+    explicit ResultOr(T v) : err(Err::OK), value(v) {}
 };
