@@ -10,10 +10,10 @@ namespace data_fetching
     struct ImageInfo
     {
         int64_t update_ts;
-        char image_text[64];
+        // char image_text[64];
     };
 
-    ResultOr<ImageInfo> fetch_image_info();
+    ResultOr<ImageInfo> fetch_image_info(int8_t connected_ssid_index);
     Err fetch_image(pimoroni::InkyFrame &inky_frame, int8_t connected_ssid_index);
 
 }

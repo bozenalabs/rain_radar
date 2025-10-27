@@ -51,16 +51,16 @@ namespace data_fetching
 
                 printf("Key: '%.*s' Value: '%.*s'\n", (int)key.size(), key.data(), (int)value.size(), value.data());
 
-                if (key == "precip_ts")
+                if (key == "local_time")
                 {
                     info.update_ts = strtol(value.data(), nullptr, 10);
                 }
-                else if (key == "text")
-                {
-                    const size_t textBufSize = sizeof(info.image_text);
-                    size_t n = value.copy(info.image_text, textBufSize - 1);
-                    info.image_text[n] = '\0';
-                }
+                // else if (key == "text")
+                // {
+                //     const size_t textBufSize = sizeof(info.image_text);
+                //     size_t n = value.copy(info.image_text, textBufSize - 1);
+                //     info.image_text[n] = '\0';
+                // }
             }
 
             line = nextLine + 1;
@@ -86,7 +86,7 @@ namespace data_fetching
         return ERR_OK;
     }
 
-    ResultOr<ImageInfo> fetch_image_info()
+    ResultOr<ImageInfo> fetch_image_info(int8_t connected_ssid_index)
     {
         if (!wifi_setup::is_connected())
         {
@@ -96,7 +96,9 @@ namespace data_fetching
 
         http_client_util::http_req_t req = {0};
         req.hostname = HOST;
-        req.url = "/image_info.txt";
+        std::string url_str = "/" + std::to_string(connected_ssid_index) + "/image_info.txt";
+        req.url = url_str.c_str();
+        printf("Requesting URL: %s from %s\n", req.url, req.hostname);
 
         ImageInfo info;
         req.callback_arg = &info;
