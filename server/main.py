@@ -873,6 +873,7 @@ def convert_to_bitmap(img_wrapped: ImageWrapped, pico_variant: PicoType, next_wa
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--deploy", action="store_true", help="Copy the generated combined image to the deployment directory")
+    parser.add_argument("--deploy-dir", type=str, default="/var/lib/inky-frame/publicly_available", help="Deployment target directory")
     parser.add_argument("--clean-up", action="store_true", help="Delete old precipiation data")
     args = parser.parse_args()
 
@@ -882,11 +883,13 @@ if __name__ == "__main__":
                 print(f"Deleting old precipitation file: {file}")
                 file.unlink()
 
+    base_deploy_dir = Path(args.deploy_dir)
+
     for i in range(10):
         build_image(i)
         if args.deploy:
-            deploy_dir = Path(f"publicly_available/{i}")
-            deploy_dir.mkdir(exist_ok=True)
+            deploy_dir = base_deploy_dir / str(i)
+            deploy_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy(QUANTIZED_PNG_FILE, deploy_dir / QUANTIZED_PNG_FILE.name)
             shutil.copy(QUANTIZED_PICO2W_PNG_FILE, deploy_dir / QUANTIZED_PICO2W_PNG_FILE.name)
             shutil.copy(QUANTIZED_BIN_FILE, deploy_dir / QUANTIZED_BIN_FILE.name)
