@@ -10,6 +10,7 @@
 
 #include "battery.hpp"
 #include "data_fetching.hpp"
+#include "default_image.hpp"
 #include "drivers/inky73/inky73.hpp"
 #include "drivers/pcf85063a/pcf85063a.hpp"
 #include "drivers/psram_display/psram_display.hpp"
@@ -60,10 +61,18 @@ InkyFrame inky_frame;
 
 void draw_error(InkyFrame &graphics, const std::string_view &msg)
 {
+    // Draw an error banner overlaid on the bottom of the background
+    int banner_w = graphics.width * 2 / 3;
+    int banner_h = 70;
+    int banner_x = (graphics.width - banner_w) / 2;
+    int banner_y = graphics.height - banner_h - 20;
+
+    graphics.set_pen(Colours::BLACK);
+    graphics.rectangle(Rect(banner_x - 2, banner_y - 2, banner_w + 4, banner_h + 4));
     graphics.set_pen(Colours::RED);
-    graphics.rectangle(Rect(graphics.width / 4, graphics.height * 2 / 3, graphics.width / 2, graphics.height / 4));
+    graphics.rectangle(Rect(banner_x, banner_y, banner_w, banner_h));
     graphics.set_pen(Colours::WHITE);
-    graphics.text(msg, Point(graphics.width / 4 + 8, graphics.height * 2 / 3 + 8), graphics.width / 2 - 16, 2);
+    graphics.text(msg, Point(banner_x + 12, banner_y + 12), banner_w - 24, 2);
 }
 
 void draw_text_with_background(InkyFrame &graphics, const std::string_view &msg, Point position, uint8_t font_size, Colours text_colour, Colours background_colour)
@@ -279,6 +288,9 @@ int main()
         persistent::save(&payload);
 
         int retry_delay_mins = persistent::get_retry_delay_minutes(payload.failure_count);
+
+        // Load the fallback nebula background into PSRAM display buffer
+        inky_frame.ramDisplay.write_span(0, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_DATA);
 
         std::ostringstream oss;
         oss << app_msg << " (" << errToString(app_err) << ")\n"
