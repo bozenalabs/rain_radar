@@ -11,8 +11,16 @@ if (DEFINED ENV{PIMORONI_PICO_FETCH_FROM_GIT_PATH} AND (NOT PIMORONI_PICO_FETCH_
     message("Using PIMORONI_PICO_FETCH_FROM_GIT_PATH from environment ('${PIMORONI_PICO_FETCH_FROM_GIT_PATH}')")
 endif ()
 
+if (DEFINED ENV{PIMORONI_PICO_PATH} AND (NOT PIMORONI_PICO_PATH))
+    set(PIMORONI_PICO_PATH $ENV{PIMORONI_PICO_PATH})
+    message("Using PIMORONI_PICO_PATH from environment ('${PIMORONI_PICO_PATH}')")
+endif ()
+
 if (NOT PIMORONI_PICO_PATH)
-    if (PIMORONI_PICO_FETCH_FROM_GIT)
+    if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../pimoroni-pico/pimoroni_pico_import.cmake")
+        set(PIMORONI_PICO_PATH "${CMAKE_CURRENT_LIST_DIR}/../pimoroni-pico")
+        message("Defaulting PIMORONI_PICO_PATH to adjacent submodule: ${PIMORONI_PICO_PATH}")
+    elseif (PIMORONI_PICO_FETCH_FROM_GIT)
         include(FetchContent)
         set(FETCHCONTENT_BASE_DIR_SAVE ${FETCHCONTENT_BASE_DIR})
         if (PIMORONI_PICO_FETCH_FROM_GIT_PATH)

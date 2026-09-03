@@ -1,0 +1,4 @@
+[submodule "firmware_c/pimoroni-pico"]
+	path = firmware_c/pimoroni-pico
+	url = git@github.com:HalFrgrd/pimoroni-pico.git
+	branch = direct_to_frame_buffer

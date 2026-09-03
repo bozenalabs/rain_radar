@@ -1,18 +1,38 @@
 # Firmware C/C++
 
-## Workflow
-- I start the container with `docker compose up --detach`.
-- Then I launch vscode to attach to the container.
-- In the container I have setup vscode similar to: https://paulbupejr.com/raspberry-pi-pico-windows-development/
-- I left the cmake kit as unspecified.
-- Set the `Cmake: Build Directory` to e.g. `${workspaceFolder}/rain_radar_app/build_pico2_w`
-- `> CMake: Configure` And selected the rain radar CMakeLists.txt.
-- Then `> Cmake: Build` command works.
-- This should create the uf2 file.
-- Put the pico into bootloader and copy over the uf2 file from the build dir.
+## Building with Nix Shell (Recommended)
 
-## Single command build:
-Look at the github workflow file.
+Start a shell with the complete ARM toolchain, Pico SDK (with submodules), picotool, and CMake:
+
+```bash
+nix-shell
+```
+
+From inside the nix-shell:
+
+### Build for Pico 2 W:
+```bash
+mkdir -p firmware_c/rain_radar_app/build_pico2_w
+cd firmware_c/rain_radar_app/build_pico2_w
+cmake ..
+make -j$(nproc)
+```
+
+### Build for Pico W:
+```bash
+mkdir -p firmware_c/rain_radar_app/build_pico_w
+cd firmware_c/rain_radar_app/build_pico_w
+cmake ..
+make -j$(nproc)
+```
+
+Single-command build outside the shell:
+```bash
+nix-shell --run "cd firmware_c/rain_radar_app && mkdir -p build_pico2_w && cd build_pico2_w && cmake .. && make -j\$(nproc)"
+```
+
+## Building with Docker (Alternative)
+- Start container with `docker compose up --detach` in `firmware_c/`.
 
 ### misc
 https://www.raspberrypi.com/documentation/pico-sdk/
