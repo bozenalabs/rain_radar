@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <iomanip>
@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <string>
 #include <time.h>
-
 
 #include "battery.hpp"
 #include "data_fetching.hpp"
@@ -53,19 +52,18 @@ enum Colours : uint8_t {
     ORANGE = 6,
     CLEAN = 7
 };
-
 #else
-#error        
+#error "Unsupported PICO architecture"
 #endif
 
-
 InkyFrame inky_frame;
+
 void draw_error(InkyFrame &graphics, const std::string_view &msg)
 {
     graphics.set_pen(Colours::RED);
-    graphics.rectangle(Rect(graphics.width / 3, graphics.height * 2 / 3, graphics.width / 3, graphics.height / 4));
+    graphics.rectangle(Rect(graphics.width / 4, graphics.height * 2 / 3, graphics.width / 2, graphics.height / 4));
     graphics.set_pen(Colours::WHITE);
-    graphics.text(msg, Point(graphics.width / 3 + 5, graphics.height * 2 / 3 + 5), graphics.width / 3 - 5, 2);
+    graphics.text(msg, Point(graphics.width / 4 + 8, graphics.height * 2 / 3 + 8), graphics.width / 2 - 16, 2);
 }
 
 void draw_text_with_background(InkyFrame &graphics, const std::string_view &msg, Point position, uint8_t font_size, Colours text_colour, Colours background_colour)
@@ -78,7 +76,6 @@ void draw_text_with_background(InkyFrame &graphics, const std::string_view &msg,
     graphics.set_pen(text_colour);
     graphics.text(msg, position, graphics.width, font_size);
 }
-
 
 void draw_battery_status(InkyFrame &graphics, const char *status)
 {
@@ -100,7 +97,6 @@ int next_wakeup_min = 10;
 int next_wakeup_hour = -1;
 
 int get_mins_until_wakeup(int current_hour, int current_min, int wakeup_hour, int wakeup_min) {
-
     if (wakeup_hour < 0) {
         int mins_to_wakeup;
         if (wakeup_min < current_min) {
@@ -110,7 +106,6 @@ int get_mins_until_wakeup(int current_hour, int current_min, int wakeup_hour, in
         }
         return mins_to_wakeup;
     } else {
-        
         int total_current_mins = current_hour * 60 + current_min;
         int total_wakeup_mins = wakeup_hour * 60 + wakeup_min;
         
@@ -135,18 +130,11 @@ void draw_next_wakeup(InkyFrame &graphics, int hour, int minute)
     }
 
     int text_width = graphics.measure_text(oss.str(), 1);
-
     draw_text_with_background(graphics, oss.str(), Point(graphics.width - 60 - text_width, graphics.height - 10), 1, Colours::WHITE, Colours::BLACK);
 }
 
-
-
-
-std::tuple<Err, std::string, bool> run_app()
+std::tuple<Err, std::string, bool> run_app(persistent::PersistentData &payload)
 {
-
-    persistent::PersistentData payload = persistent::read();
-
     ResultOr<int8_t> new_preferred_ssid_index = wifi_setup::wifi_connect(inky_frame, payload.wifi_preferred_ssid_index);
     if (!new_preferred_ssid_index.ok())
     {
@@ -188,7 +176,6 @@ std::tuple<Err, std::string, bool> run_app()
     next_wakeup_min = image_header.next_wakeup_minutes;
 
     if (image_header.draw_extra) {
-
         // points of interest
         for (const auto &poi : secrets::POINTS_OF_INTEREST_XY)
         {
@@ -201,7 +188,6 @@ std::tuple<Err, std::string, bool> run_app()
 
     // Initialize battery monitoring
     // MUST BE INITIALIZED AFTER WIFI SETUP ON PICO W
-    // for some reason it needs cyw43_arch_init() to have been called first
     Battery battery;
     battery.init();
     const char *status = battery.get_status_string();
@@ -212,28 +198,56 @@ std::tuple<Err, std::string, bool> run_app()
     }
 
     return {Err::OK, "", image_header.draw_battery};
-
 }
-
 
 const uint HOLD_VSYS_EN = 2;
 
-void sleep_until(InkyFrame &inky_frame, int second, int minute, int hour, int day) {
-    if(second != -1 || minute != -1 || hour != -1 || day != -1) {
-      // set an alarm to wake inky up at the specified time and day
-      inky_frame.rtc.set_alarm(second, minute, hour, day);
-      inky_frame.rtc.enable_alarm_interrupt(true);
+void sleep_for_minutes(InkyFrame &frame, int minutes) {
+    printf("Sleeping for %d minute(s)...\n", minutes);
+
+    frame.rtc.unset_alarm();
+    frame.rtc.clear_alarm_flag();
+    frame.rtc.unset_timer();
+    frame.rtc.clear_timer_flag();
+
+    if (minutes > 0) {
+        // PCF85063A timer with 1/60Hz tick period supports 1..255 minutes
+        uint8_t ticks = static_cast<uint8_t>(std::min(240, minutes));
+        frame.rtc.set_timer(ticks, PCF85063A::TIMER_TICK_1_OVER_60HZ);
+        frame.rtc.enable_timer_interrupt(true, false);
+    }
+
+    // Release the vsys hold pin so that inky can go to sleep on battery
+    gpio_put(HOLD_VSYS_EN, false);
+
+    // On USB power the pico won't fall asleep, so manually wait and then reboot
+    sleep_ms(std::max(10'000, minutes * 60 * 1000));
+    watchdog_reboot(0, 0, 0);
+    while (true) {}
+}
+
+void sleep_until(InkyFrame &frame, int second, int minute, int hour, int day) {
+    frame.rtc.unset_alarm();
+    frame.rtc.clear_alarm_flag();
+    frame.rtc.unset_timer();
+    frame.rtc.clear_timer_flag();
+
+    if (second != -1 || minute != -1 || hour != -1 || day != -1) {
+        // Set an alarm to wake inky up at the specified time and day
+        frame.rtc.set_alarm(second, minute, hour, day);
+        frame.rtc.enable_alarm_interrupt(true);
     }
 
     int wake_in_minutes = get_mins_until_wakeup(dt.hour, dt.min, hour, minute);
 
-    // release the vsys hold pin so that inky can go to sleep
+    // Release the vsys hold pin so that inky can go to sleep
     gpio_put(HOLD_VSYS_EN, false);
-    // on battery the pico will power off and reboot here
-    // on usb power it won't fall asleep so we manually wait and then reboot
+
+    // On battery the pico will power off and reboot here
+    // On usb power it won't fall asleep so we manually wait and then reboot
     sleep_ms(std::max(10'000, wake_in_minutes * 60 * 1000));
     watchdog_reboot(0, 0, 0);
-    while(true) {}
+    while (true) {}
 }
 
 int main()
@@ -244,53 +258,65 @@ int main()
     inky_frame.rtc.unset_timer();
     inky_frame.rtc.clear_timer_flag();
 
-    // get the rtc ticking
-    inky_frame.rtc.set_datetime(&dt);
-
     stdio_init_all();
     sleep_ms(100);
 
-    // Reducing system clocked resulted in wifi connection issues
-    // I think the pico couldn't keep up with the data rate
-    // Reduce CPU clock to 96 MHz to lower power consumption.
-    // set_sys_clock_khz takes kHz and returns true on success.
-    // const uint32_t target_khz = 96000;
-    // if (!set_sys_clock_khz(target_khz, true)) {
-    //     printf("Warning: failed to set system clock to %u kHz\n", target_khz);
-    // } else {
-    //     printf("System clock set to %u kHz\n", target_khz);
-    // }
+    // Read current datetime from RTC
+    dt = inky_frame.rtc.get_datetime();
 
     InkyFrame::WakeUpEvent event = inky_frame.get_wake_up_event();
-    printf("Wakup event: %d\n", event);
+    printf("Wakeup event: %d\n", event);
 
-    auto [app_err, app_msg, draw_battery] = run_app();
+    persistent::PersistentData payload = persistent::read();
+    printf("Persistent state: preferred_ssid=%d, failure_count=%u\n",
+           payload.wifi_preferred_ssid_index, payload.failure_count);
+
+    auto [app_err, app_msg, draw_battery] = run_app(payload);
 
     if (app_err != Err::OK) {
-        std::string error_msg = std::string(app_msg) + " (" + std::string(errToString(app_err)) + ")";
+        // Increment consecutive failure counter and persist
+        payload.failure_count++;
+        persistent::save(&payload);
+
+        int retry_delay_mins = persistent::get_retry_delay_minutes(payload.failure_count);
+
+        std::ostringstream oss;
+        oss << app_msg << " (" << errToString(app_err) << ")\n"
+            << "Retry in " << retry_delay_mins << "m (#" << payload.failure_count << ")";
+        std::string error_msg = oss.str();
         printf("Error: %s\n", error_msg.c_str());
-        next_wakeup_hour = -1;
-        next_wakeup_min = (dt.min+1 + 10) / 10 * 10;
-        if (next_wakeup_min >= 60)
-        {
-            next_wakeup_min -= 60;
-        }
+
         draw_error(inky_frame, error_msg);
+
+        if (wifi_setup::is_connected()) {
+            wifi_setup::network_deinit(inky_frame);
+        }
+
+        inky_frame.update(true);
+
+        printf("Finished with error. Sleeping for %d min...\n", retry_delay_mins);
+        sleep_for_minutes(inky_frame, retry_delay_mins);
     } else {
-    }
-    if (draw_battery) {
-        draw_next_wakeup(inky_frame, next_wakeup_hour, next_wakeup_min);
-    }
+        // Success: reset failure count if it was non-zero
+        if (payload.failure_count != 0) {
+            printf("Resetting failure_count from %u to 0\n", payload.failure_count);
+            payload.failure_count = 0;
+            persistent::save(&payload);
+        }
 
-    if (wifi_setup::is_connected()) {
-        wifi_setup::network_deinit(inky_frame);
+        if (draw_battery) {
+            draw_next_wakeup(inky_frame, next_wakeup_hour, next_wakeup_min);
+        }
+
+        if (wifi_setup::is_connected()) {
+            wifi_setup::network_deinit(inky_frame);
+        }
+        
+        inky_frame.update(true);
+
+        printf("Finished successfully. Sleeping until %02d:%02d UTC\n", next_wakeup_hour, next_wakeup_min);
+        sleep_until(inky_frame, -1, next_wakeup_min, next_wakeup_hour, -1);
     }
-    
-    inky_frame.update(true);
-
-    printf("done!\n");
-
-    sleep_until(inky_frame, -1, next_wakeup_min, next_wakeup_hour, -1);
 
     return 0;
 }
