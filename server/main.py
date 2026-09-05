@@ -716,7 +716,7 @@ def build_image(deploy_idx: int):
     current_dt = dt.datetime.now()
     current_hour = current_dt.hour
     
-    if current_hour >= 20 or current_hour < 6:
+    if current_hour >= 20 or current_hour < 5:
         image_wrapped = build_moon_image(True if deploy_idx == 4 else False)
         next_wake = get_next_wake_time()
     elif deploy_idx == 4:
@@ -747,10 +747,10 @@ def get_next_wake_time(short_refresh=20, long_refresh=40) -> NextWakeTime:
     current_dt = dt.datetime.now()
     current_dt_ts = int(current_dt.timestamp())
 
-    if current_dt.hour >= 21 or current_dt.hour < 7:
-        return NextWakeTime(current_dt_ts, 7, 0, True)  # 7:00 AM
+    if current_dt.hour >= 21 or current_dt.hour < 6:
+        return NextWakeTime(current_dt_ts, 6, 0, True)  # 6:00 AM
 
-    if 7 <= current_dt.hour < 10 or 16 <= current_dt.hour < 20:
+    if 6 <= current_dt.hour < 10 or 16 <= current_dt.hour < 20:
         return NextWakeTime(current_dt_ts, -1, (current_dt.minute + short_refresh) // 10 * 10 % 60, False)
 
     return NextWakeTime(current_dt_ts, -1, (current_dt.minute + long_refresh) // 10 * 10 % 60, False)
